@@ -309,13 +309,19 @@ export class Door extends Passageway {
     return true;
   };
 
-  /** Public rule descriptor: tunnel locks can only be cleared from the exit side. */
-  getTraversalTraits = () => ({
-    tunnel: this.type === DoorType.TUNNELDOOR,
-    unlocked: !this.locked,
-    unlockFromHere: this.type === DoorType.TUNNELDOOR
-      ? !(this.startRoom || this.linkedDoor === this.room.level.exitRoom?.tunnelDoor) : null,
-  });
+  /** Public rule descriptor used by the agent to omit impossible zero-turn inputs. */
+  getTraversalTraits = () => {
+    const player = this.game.players[this.game.localPlayerID];
+    const hasKey = this.type === DoorType.LOCKEDDOOR &&
+      player?.inventory.hasItem(Key) !== null && player?.inventory.hasItem(Key) !== undefined;
+    return {
+      tunnel: this.type === DoorType.TUNNELDOOR,
+      unlocked: !this.locked,
+      unlockableFromHere: !this.locked || hasKey || GameConstants.DEVELOPER_MODE,
+      unlockFromHere: this.type === DoorType.TUNNELDOOR
+        ? !(this.startRoom || this.linkedDoor === this.room.level.exitRoom?.tunnelDoor) : null,
+    };
+  };
 
   getArrivalPosition = (side?: number) => {
     if (this.doorDir === Direction.UP) return {x:this.x, y:this.y+1};

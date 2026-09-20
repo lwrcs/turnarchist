@@ -22,8 +22,12 @@
       const preview = moves.get(direction);
       if (!preview) return [];
       const traversal = preview.traversal ?? {};
-      if (preview.resolution === "ladder" && traversal.unlocked === false &&
-          traversal.unlockableFromHere !== true) return [];
+      // A locked or guarded traversal that cannot be opened from this side is
+      // a zero-turn no-op.  Do not offer it as a legal branch: otherwise an
+      // agent can choose it forever while the rest of the room advances.
+      if (["ladder", "door-transition-or-door-interaction"].includes(preview.resolution) &&
+          traversal.unlocked === false && traversal.unlockableFromHere !== true &&
+          traversal.unlockFromHere !== true) return [];
       // Empty solid walls are not actions.  A wall torch or any other
       // occupant still receives the real interaction attempt.
       if (preview.resolution === "blocked-or-interact" && !preview.occupantId) return [];
@@ -62,6 +66,8 @@
   }
 
   function summary(action, before, after, result) {
+    const damagingWarnings = view => (view.room?.hitWarnings ?? [])
+      .filter(warning => warning.dangerous && warning.directionOnly !== true);
     const entities = view => new Map((view.room?.entities ?? [])
       .filter(entity => entity.id)
       .map(entity => [entity.id, entity]));
@@ -98,8 +104,12 @@
       enemiesKilled,
       enemiesDamaged,
       objectsDestroyed,
-      threatsBefore: (before.room.hitWarnings ?? []).filter(warning => warning.dangerous).length,
-      threatsAfter: (after.room.hitWarnings ?? []).filter(warning => warning.dangerous).length,
+      // Direction-only arrows visually annotate a target tile. They are not a
+      // second damaging event, so they must not inflate tactical threat counts.
+      threatsBefore: damagingWarnings(before).length,
+      threatsAfter: damagingWarnings(after).length,
+      dangerousWarningsAfter: copy(damagingWarnings(after)),
+      decisionAfter: after.decision ?? null,
       transition: result.terminated ? 'death' : before.room.depth !== after.room.depth ? 'floor' :
         before.room.id !== after.room.id ? 'room' : null,
       recorded: result.info?.recorded === true,
@@ -112,9 +122,24 @@
     const delta = outcome.playerDelta ?? {};
     if (outcome.status === 'unsupported') return `unavailable (${String(outcome.error ?? 'unsupported').split('\n')[0]})`;
     const parts = [];
+    const preview = candidate?.preview ?? {};
+    const traversal = preview.traversal ?? {};
+    const threatText = count => `${count} active damaging ${count === 1 ? 'warning' : 'warnings'}`;
     if (outcome.transition === 'death') parts.push('dies');
     else if (outcome.transition === 'floor') parts.push('changes floor');
-    else if (outcome.transition === 'room') parts.push('enters another room');
+    else if (outcome.transition === 'room') {
+      parts.push('enters another room');
+      if (typeof outcome.threatsAfter === 'number' && outcome.threatsAfter > 0) {
+        parts.push(`new room has ${threatText(outcome.threatsAfter)}`);
+      }
+    }
+    else if (preview.resolution === 'ladder' && delta.positionChanged) {
+      const path = traversal.direction === 'down'
+        ? `${traversal.sidePath ? 'sidepath' : 'main-path'} down ladder`
+        : 'up ladder';
+      parts.push(`moves onto ${path}`);
+      if (outcome.decisionAfter === 'ladder') parts.push('confirmation interface available');
+    }
     else if (outcome.enemiesKilled?.length) parts.push(`kills ${outcome.enemiesKilled.length} ${outcome.enemiesKilled.length === 1 ? 'enemy' : 'enemies'}`);
     else if (outcome.objectsDestroyed?.length) {
       const kinds = [...new Set(outcome.objectsDestroyed.map(entity => String(entity.kind ?? 'object')
@@ -122,12 +147,15 @@
       parts.push(`destroys ${kinds.join(', ')} and stays in place`);
     } else if (outcome.enemiesDamaged?.length) parts.push(`hits ${outcome.enemiesDamaged.length} ${outcome.enemiesDamaged.length === 1 ? 'enemy' : 'enemies'} and stays in place`);
     else if (delta.positionChanged) parts.push(`moves to (${outcome.playerAfter?.x}, ${outcome.playerAfter?.y})`);
-    else if (outcome.recorded && candidate?.preview?.resolution === 'attack') parts.push('attacks and stays in place');
+    else if (!outcome.recorded && traversal.unlocked === false) {
+      parts.push(`blocked by locked ${traversal.kind ?? (preview.resolution === 'ladder' ? 'ladder' : 'door')}; no turn advances`);
+    }
+    else if (outcome.recorded && preview.resolution === 'attack') parts.push('attacks and stays in place');
     else if (outcome.recorded) parts.push('acts and stays in place');
     else parts.push('has no effect');
     if (typeof delta.health === 'number' && delta.health < 0) parts.push(`takes ${Math.abs(delta.health)} health`);
-    if (typeof outcome.threatsAfter === 'number' && outcome.threatsAfter > 0) {
-      parts.push(`${outcome.threatsAfter} dangerous ${outcome.threatsAfter === 1 ? 'warning remains' : 'warnings remain'}`);
+    if (outcome.transition !== 'room' && typeof outcome.threatsAfter === 'number' && outcome.threatsAfter > 0) {
+      parts.push(`${threatText(outcome.threatsAfter)} remain`);
     }
     return parts.join('; ');
   }

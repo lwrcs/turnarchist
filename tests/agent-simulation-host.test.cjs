@@ -76,11 +76,20 @@ test('candidate builder excludes locked ladders and empty solid walls', () => {
   assert.deepEqual(candidates.map(candidate => candidate.id), ['move_down','move_left']);
 });
 
+test('candidate builder excludes impossible guarded doors but keeps unlockable traversals', () => {
+  const candidates = host.candidateActions({tactical:{moves:[
+    {direction:'up',resolution:'door-transition-or-door-interaction',traversal:{unlocked:false}},
+    {direction:'right',resolution:'door-transition-or-door-interaction',traversal:{unlocked:false,unlockableFromHere:true}},
+    {direction:'down',resolution:'door-transition-or-door-interaction',traversal:{unlocked:false,unlockFromHere:true}},
+  ]}});
+  assert.deepEqual(candidates.map(candidate => candidate.id), ['move_right','move_down']);
+});
+
 test('changing rooms does not report the previous room enemies as killed', async () => {
   const before = {player:{x:4,y:4,z:0,health:2,mana:1,coins:0,turnCount:5},room:{id:'room-a',depth:0,
     entities:[{id:'z1',kind:'Zombie',isEnemy:true,health:1},{id:'s1',kind:'Skull',isEnemy:true,health:1}],hitWarnings:[]}};
   const after = {player:{x:1,y:4,z:0,health:2,mana:1,coins:0,turnCount:6},room:{id:'room-b',depth:0,
-    entities:[],hitWarnings:[]}};
+    entities:[],hitWarnings:[{dangerous:true,directionOnly:false},{dangerous:true,directionOnly:true}]}};
   const live = {observe:()=>before,captureSimulationSnapshot:()=>({serialized:'{}'})};
   const child = {restoreSimulationSnapshot:async()=>{},observe:()=>before,step:async()=>({terminated:false,truncated:false,
     info:{recorded:true,turnDelta:1}})};
@@ -89,7 +98,15 @@ test('changing rooms does not report the previous room enemies as killed', async
     .simulate({type:'Move',direction:'right'});
   assert.equal(outcome.transition, 'room');
   assert.deepEqual(outcome.enemiesKilled, []);
-  assert.match(host.describeOutcome({outcome}), /enters another room/);
+  assert.equal(outcome.threatsAfter, 1);
+  assert.match(host.describeOutcome({outcome}), /enters another room; new room has 1 active damaging warning/);
+});
+
+test('ladder previews state the destination and confirmation availability', () => {
+  const text = host.describeOutcome({preview:{resolution:'ladder',traversal:{direction:'down',sidePath:true}},outcome:{
+    playerDelta:{positionChanged:true}, playerAfter:{x:4,y:5}, decisionAfter:'ladder', recorded:true, threatsAfter:0,
+  }});
+  assert.equal(text, 'moves onto sidepath down ladder; confirmation interface available');
 });
 
 test('destroying a block is reported as destruction without player movement', async () => {

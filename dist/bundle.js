@@ -98081,13 +98081,19 @@ class Door extends passageway_1.Passageway {
         this.canCrushEnemy = () => {
             return true;
         };
-        /** Public rule descriptor: tunnel locks can only be cleared from the exit side. */
-        this.getTraversalTraits = () => ({
-            tunnel: this.type === DoorType.TUNNELDOOR,
-            unlocked: !this.locked,
-            unlockFromHere: this.type === DoorType.TUNNELDOOR
-                ? !(this.startRoom || this.linkedDoor === this.room.level.exitRoom?.tunnelDoor) : null,
-        });
+        /** Public rule descriptor used by the agent to omit impossible zero-turn inputs. */
+        this.getTraversalTraits = () => {
+            const player = this.game.players[this.game.localPlayerID];
+            const hasKey = this.type === DoorType.LOCKEDDOOR &&
+                player?.inventory.hasItem(key_1.Key) !== null && player?.inventory.hasItem(key_1.Key) !== undefined;
+            return {
+                tunnel: this.type === DoorType.TUNNELDOOR,
+                unlocked: !this.locked,
+                unlockableFromHere: !this.locked || hasKey || gameConstants_1.GameConstants.DEVELOPER_MODE,
+                unlockFromHere: this.type === DoorType.TUNNELDOOR
+                    ? !(this.startRoom || this.linkedDoor === this.room.level.exitRoom?.tunnelDoor) : null,
+            };
+        };
         this.getArrivalPosition = (side) => {
             if (this.doorDir === game_1.Direction.UP)
                 return { x: this.x, y: this.y + 1 };
@@ -100888,7 +100894,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("7da7fdd1ce283d7a6cf4")
+/******/ 		__webpack_require__.h = () => ("c0085c7b5f82ea038f90")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */
