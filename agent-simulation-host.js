@@ -6,6 +6,10 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
   const copy = value => JSON.parse(JSON.stringify(value));
   const DIRECTIONS = ["up", "right", "down", "left"];
+  const within = (promise, milliseconds, message) => new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error(message)), milliseconds);
+    Promise.resolve(promise).then(value => { clearTimeout(timeout); resolve(value); }, error => { clearTimeout(timeout); reject(error); });
+  });
 
   // This is intentionally mechanical.  It converts the game's current
   // operator preview into candidate inputs without deciding which one is best.
@@ -102,7 +106,10 @@
         frame.title = 'Hidden deterministic action simulator';
         frame.setAttribute('aria-hidden', 'true');
         frame.tabIndex = -1;
-        frame.style.cssText = 'position:fixed;left:-200vw;top:0;width:1px;height:1px;border:0;visibility:hidden';
+        // Keep this frame paintable. Browsers may pause animation frames for a
+        // visibility:hidden iframe, which leaves turn resolution stuck after a
+        // restored branch performs a real movement action.
+        frame.style.cssText = 'position:fixed;left:-200vw;top:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none';
         frame.src = './play.html?agent=1&simulator=1';
         document.body.appendChild(frame);
         return frame;
@@ -118,21 +125,34 @@
         if (Date.now() >= deadline) throw new Error('Hidden simulator did not finish loading');
         await new Promise(resolve => setTimeout(resolve, 25));
       }
-      return this.frame.contentWindow.agent;
+      const agent = this.frame.contentWindow.agent;
+      // A branch preview must settle immediately and independently of the
+      // visible lab's speed toggle.
+      agent.setFastMode?.(true);
+      return agent;
     }
 
     async simulateFromSnapshot(snapshot, action, liveBefore) {
       const live = this.source();
       const simulator = await this.agent();
-      await simulator.restoreSimulationSnapshot(snapshot.serialized);
-      const before = copy(simulator.observe());
-      const result = await simulator.step(copy(action));
-      const after = copy(simulator.observe());
-      const liveAfter = copy(live.observe());
-      if (JSON.stringify(liveBefore) !== JSON.stringify(liveAfter)) {
-        throw new Error('Simulation preview changed the live game; preview discarded');
+      try {
+        await within(simulator.restoreSimulationSnapshot(snapshot.serialized), 3000,
+          'Simulator restore timed out; branch discarded');
+        const before = copy(simulator.observe());
+        const result = await within(simulator.step(copy(action)), 3000,
+          'Simulator action timed out; branch discarded');
+        const after = copy(simulator.observe());
+        const liveAfter = copy(live.observe());
+        if (JSON.stringify(liveBefore) !== JSON.stringify(liveAfter)) {
+          throw new Error('Simulation preview changed the live game; preview discarded');
+        }
+        return summary(action, before, after, result);
+      } catch (error) {
+        // AgentEnvironment marks its iframe failed after a timed-out action.
+        // Never reuse that poisoned branch for a later preview.
+        this.dispose();
+        throw error;
       }
-      return summary(action, before, after, result);
     }
 
     async simulate(action) {
@@ -159,10 +179,14 @@
             results.push({...candidate, outcome: await this.simulateFromSnapshot(snapshot, candidate.action, liveBefore)});
           } catch (error) {
             results.push({...candidate, outcome: {status: 'unsupported', action: copy(candidate.action),
-              transition: null, playerDelta: {}, recorded: false, error: String(error)}});
+              transition: null, playerDelta: {}, recorded: false,
+              error: error && typeof error === 'object' && typeof error.stack === 'string'
+                ? error.stack : String(error)}});
           }
         }
-        const settled = results.filter(result => result.outcome.status === 'settled');
+        // A branch that did not record the requested action is not a valid
+        // simulation outcome.  Never present a silent no-op as a suggestion.
+        const settled = results.filter(result => result.outcome.status === 'settled' && result.outcome.recorded);
         const ranked = settled.sort((left, right) => compareOutcomes(left.outcome, right.outcome));
         return {schemaVersion: 1, candidates: results, ranked: ranked.map(result => ({
           id: result.id, action: result.action, preview: result.preview, outcome: result.outcome,

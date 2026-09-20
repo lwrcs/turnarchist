@@ -2,6 +2,7 @@
   const frame = document.getElementById('game');
   const status = document.getElementById('status');
   const result = document.getElementById('result');
+  const actionFeedback = document.getElementById('action-feedback');
   document.getElementById('super-fast').onchange = event => api().setFastMode(event.target.checked);
   const buttons = Array.from(document.querySelectorAll('button'));
   const api = () => {
@@ -15,10 +16,27 @@
     try {
       const output = await operation();
       result.textContent = JSON.stringify(output, null, 2);
+      if (output?.selected?.action) {
+        const choice = output.selected;
+        const direction = choice.action.direction || choice.action.type;
+        const outcome = choice.outcome || {};
+        const damage = outcome.playerDelta?.health < 0 ? `, takes ${Math.abs(outcome.playerDelta.health)} health` : '';
+        const hit = outcome.enemiesKilled?.length ? `kills ${outcome.enemiesKilled.length} enemy` : outcome.enemiesDamaged?.length ? `hits ${outcome.enemiesDamaged.length} enemy` : 'changes position';
+        actionFeedback.dataset.kind = 'success';
+        actionFeedback.innerHTML = `<strong>Preview selected: ${direction}</strong> — ${hit}${damage}. Four legal actions were evaluated from the same snapshot; the live game did not change.`;
+        actionFeedback.style.display = 'block';
+      } else if (output?.candidates) {
+        actionFeedback.dataset.kind = 'error';
+        actionFeedback.textContent = 'Preview finished without a valid action. The game state was not changed.';
+        actionFeedback.style.display = 'block';
+      }
       status.textContent = 'Ready';
     } catch (error) {
       status.textContent = String(error);
       result.textContent = JSON.stringify({error: String(error)}, null, 2);
+      actionFeedback.dataset.kind = 'error';
+      actionFeedback.textContent = `Preview failed: ${error}`;
+      actionFeedback.style.display = 'block';
     } finally { buttons.forEach(button => { button.disabled = false; }); }
   }
   let batchRunner;
