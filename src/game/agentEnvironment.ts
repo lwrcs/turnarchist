@@ -137,6 +137,14 @@ export class AgentEnvironment {
   captureSimulationSnapshot() {
     if (this.busy) throw new Error("Wait for the current operation before capturing a simulation snapshot");
     if (this.seed === null || !this.ready()) throw new Error("Simulation snapshots require a ready initialized run");
+    // Combat and lighting sandboxes rewrite room geometry after seed generation.
+    // Save V2 deliberately records the seeded world, not those diagnostic-only
+    // rewrites, so restoring one would evaluate a different room.  Refuse rather
+    // than return a misleading hypothetical outcome until sandbox snapshots gain
+    // their own geometry payload.
+    if (this.scenario !== "standard") {
+      throw new Error("Isolated previews currently require a standard seeded run; diagnostic sandboxes are not snapshot-complete");
+    }
     const snapshot = createSimulationSnapshot(this.game);
     if (snapshot.ok === false) throw new Error(snapshot.error);
     return {
@@ -199,6 +207,14 @@ export class AgentEnvironment {
     const deadline = performance.now() + this.timeoutMs;
     while (!this.ready()) {
       if (performance.now() >= deadline) throw new Error("Agent step timed out; reload the agent tab before continuing");
+      // An off-screen iframe does not receive a dependable animation-frame
+      // cadence. Branches still use the ordinary game update path, but the
+      // simulator explicitly pumps it until the player owns the next turn.
+      // This is isolated from the visible game and stops as soon as ready().
+      if (AGENT_SIMULATION_MODE) {
+        this.game.update();
+        if (this.ready()) break;
+      }
       await new Promise(resolve => setTimeout(resolve, 10));
     }
   }
@@ -685,7 +701,17 @@ export class AgentEnvironment {
       const count = this.game.replayManager.getStats().count;
       if (actionInput.type === "SelectOption") {
         if (!player.menu.selectChoice(actionInput.index)) throw new AgentActionError("Selection is disabled or unavailable");
-      } else player.actionProcessor.process(action!);
+      } else {
+        player.actionProcessor.process(action!);
+        // Restoring a saved branch can briefly race the action-ready boundary: the
+        // processor then returns without recording an otherwise legal move.  The
+        // hidden evaluator is the only caller allowed to retry that dropped input;
+        // visible play keeps the ordinary single-input behavior.
+        if (AGENT_SIMULATION_MODE && actionInput.type === "Move" &&
+          this.game.replayManager.getStats().count === count && isActionReady(this.game)) {
+          player.actionProcessor.process(action!);
+        }
+      }
       this.steps++;
       await this.settle();
       const recorded = this.game.replayManager.getStats().count > count;

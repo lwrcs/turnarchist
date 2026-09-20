@@ -27767,6 +27767,7 @@ class FishingSpot extends entity_1.Entity {
         this.fishCount = 0;
         this.active = false;
         this.startFrame = 0;
+        this.getAgentResourceTraits = () => ({ kind: "fishing", available: this.active, remaining: this.fishCount });
         this.fish = (player) => {
             if (!player.inventory.canFish()) {
                 this.game.pushMessage("You need a fishing rod to fish.");
@@ -34844,6 +34845,13 @@ class Game {
                 bootLoading.setProgress(resourcesLoaded, NUM_RESOURCES);
             };
             Game.fontsheet.src = fontUrl;
+            // A browser-backed agent has no gameplay dependency on sprite decoding.
+            // Hidden Windows task sessions can indefinitely defer Image.onload, which
+            // otherwise prevents construction of the agent API before any simulation
+            // can begin.  Rendering assets still load in the background for the
+            // spectator frame; only the boot gate is skipped in opt-in agent mode.
+            if (agentMode_1.AGENT_MODE)
+                resourcesLoaded = NUM_RESOURCES;
             this.levelState = LevelState.LEVEL_GENERATION;
             // Initialize camera properties
             this.cameraX = 0;
@@ -36582,6 +36590,9 @@ const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/g
 const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
 const agentContract_1 = __webpack_require__(/*! ./agentContract */ "./src/game/agentContract.ts");
 const agentTraits_1 = __webpack_require__(/*! ./agentTraits */ "./src/game/agentTraits.ts");
+const simulationSnapshot_1 = __webpack_require__(/*! ./save/simulationSnapshot */ "./src/game/save/simulationSnapshot.ts");
+const loadV2_1 = __webpack_require__(/*! ./save/loadV2 */ "./src/game/save/loadV2.ts");
+const validate_1 = __webpack_require__(/*! ./save/validate */ "./src/game/save/validate.ts");
 const directions = {
     up: [game_1.Direction.UP, 0, -1], down: [game_1.Direction.DOWN, 0, 1],
     left: [game_1.Direction.LEFT, -1, 0], right: [game_1.Direction.RIGHT, 1, 0],
@@ -36687,6 +36698,62 @@ class AgentEnvironment {
     checkCompatibility(trainedOn) {
         return (0, agentContract_1.checkAgentCompatibility)(trainedOn);
     }
+    /**
+     * Privileged branch root for an isolated simulator. This is deliberately not
+     * included in `observe`, `perceive`, replay exports, or policy inputs.
+     */
+    captureSimulationSnapshot() {
+        if (this.busy)
+            throw new Error("Wait for the current operation before capturing a simulation snapshot");
+        if (this.seed === null || !this.ready())
+            throw new Error("Simulation snapshots require a ready initialized run");
+        // Combat and lighting sandboxes rewrite room geometry after seed generation.
+        // Save V2 deliberately records the seeded world, not those diagnostic-only
+        // rewrites, so restoring one would evaluate a different room.  Refuse rather
+        // than return a misleading hypothetical outcome until sandbox snapshots gain
+        // their own geometry payload.
+        if (this.scenario !== "standard") {
+            throw new Error("Isolated previews currently require a standard seeded run; diagnostic sandboxes are not snapshot-complete");
+        }
+        const snapshot = (0, simulationSnapshot_1.createSimulationSnapshot)(this.game);
+        if (snapshot.ok === false)
+            throw new Error(snapshot.error);
+        return {
+            schemaVersion: 1,
+            source: "privileged-agent-snapshot",
+            createdAtStep: this.steps,
+            serialized: snapshot.value.serialized,
+        };
+    }
+    /**
+     * Available only inside an agent iframe opened with `simulator=1`. The
+     * visible game never restores hypothetical branches into itself.
+     */
+    async restoreSimulationSnapshot(serialized) {
+        if (!agentMode_1.AGENT_SIMULATION_MODE)
+            throw new Error("Simulation snapshots can only be restored in an isolated simulator");
+        if (typeof serialized !== "string" || serialized.length === 0 || serialized.length > 20000000) {
+            throw new Error("Invalid simulation snapshot payload");
+        }
+        return this.exclusive(async () => {
+            const parsed = (0, validate_1.parseSaveV2Json)(serialized);
+            if (parsed.ok === false)
+                throw new Error(`Simulation snapshot validation failed: ${String(parsed.error)}`);
+            const loaded = await (0, loadV2_1.loadSaveV2)(this.game, parsed.value);
+            if (loaded.ok === false)
+                throw new Error(`Simulation snapshot load failed: ${String(loaded.error)}`);
+            this.seed = parsed.value.worldSpec.seed;
+            this.steps = 0;
+            this.failure = null;
+            this.contacts.clear();
+            this.contactKeys = new WeakMap();
+            this.nextContactKey = 0;
+            this.memory.clear();
+            this.recentTransitions = [];
+            await this.settle();
+            return this.observe();
+        });
+    }
     tacticalFrame() {
         const player = this.player();
         const room = player.getRoom();
@@ -36711,6 +36778,15 @@ class AgentEnvironment {
         while (!this.ready()) {
             if (performance.now() >= deadline)
                 throw new Error("Agent step timed out; reload the agent tab before continuing");
+            // An off-screen iframe does not receive a dependable animation-frame
+            // cadence. Branches still use the ordinary game update path, but the
+            // simulator explicitly pumps it until the player owns the next turn.
+            // This is isolated from the visible game and stops as soon as ready().
+            if (agentMode_1.AGENT_SIMULATION_MODE) {
+                this.game.update();
+                if (this.ready())
+                    break;
+            }
             await new Promise(resolve => setTimeout(resolve, 10));
         }
     }
@@ -36882,12 +36958,15 @@ class AgentEnvironment {
             const staysInPlace = pushOutcome ? pushOutcome !== "player-moves" : attack || occupant?.collidable === true || tile?.isSolid() === true;
             const landing = staysInPlace ? { x: player.x, y: player.y } : { x, y };
             const threats = warningDamage(landing.x, landing.y), projectiles = projectileDamage(landing.x, landing.y);
+            const tileHazard = tile?.getAgentHazardTraits?.() ?? null;
+            const tileDamage = tileHazard?.kind === "spikes" && (tileHazard.active || tileHazard.warning) ? tileHazard.damage ?? 0 : 0;
             const neutralized = kills && occupant?.id ? warnings.filter(w => w.sourceId === occupant.id && w.dangerous).length : 0;
             const sourceDamage = occupant?.combat.currentDamage ?? occupant?.combat.baseDamage ?? 0;
-            const knownDamage = Math.max(0, threats.knownDamage - (neutralized ? sourceDamage : 0)) + projectiles;
+            const knownDamage = Math.max(0, threats.knownDamage - (neutralized ? sourceDamage : 0)) + projectiles + tileDamage;
             return { direction, target: { x, y }, resolution: occupant?.pushable ? "push-or-attack" : attack ? "attack" :
                     tile?.isDoor ? "door-transition-or-door-interaction" : tile instanceof downLadder_1.DownLadder || tile instanceof upLadder_1.UpLadder ? "ladder" :
                         tile?.isSolid() ? "blocked-or-interact" : "move", staysInPlace, pushOutcome, occupantId: occupant?.id ?? null,
+                traversal: tile?.getTraversalTraits?.() ?? null,
                 attack: { attempted: attack, minimumDamage: damage, killThreshold: threshold, killsBeforeEnemyResponse: kills,
                     neutralizesThreatSource: kills && neutralized > 0 },
                 consequence: { landing, knownIncomingDamageBeforeDefense: knownDamage, unknownDamageSources: threats.unknownDamageSources,
@@ -36908,6 +36987,7 @@ class AgentEnvironment {
         });
         const pointsOfInterest = [
             ...tiles.filter(t => t.isDoor || t.exit).map(t => ({ id: `tile:${t.x},${t.y}`, kind: t.isDoor ? "door" : "ladder", x: t.x, y: t.y,
+                traversal: t.traversal,
                 route: this.operatorPathTo(t.x, t.y, { allowOccupiedTarget: true }) })),
             ...items.map(item => ({ id: item.id, kind: "item", x: item.x, y: item.y,
                 route: item.x !== null && item.y !== null ? this.operatorPathTo(item.x, item.y) : null })),
@@ -37263,8 +37343,17 @@ class AgentEnvironment {
                 if (!player.menu.selectChoice(actionInput.index))
                     throw new AgentActionError("Selection is disabled or unavailable");
             }
-            else
+            else {
                 player.actionProcessor.process(action);
+                // Restoring a saved branch can briefly race the action-ready boundary: the
+                // processor then returns without recording an otherwise legal move.  The
+                // hidden evaluator is the only caller allowed to retry that dropped input;
+                // visible play keeps the ordinary single-input behavior.
+                if (agentMode_1.AGENT_SIMULATION_MODE && actionInput.type === "Move" &&
+                    this.game.replayManager.getStats().count === count && (0, actionReadiness_1.isActionReady)(this.game)) {
+                    player.actionProcessor.process(action);
+                }
+            }
             this.steps++;
             await this.settle();
             const recorded = this.game.replayManager.getStats().count > count;
@@ -37372,10 +37461,13 @@ exports.AgentMemory = AgentMemory;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.setAgentFastMode = exports.AGENT_FAST_MODE = exports.AGENT_MODE = void 0;
+exports.setAgentFastMode = exports.AGENT_FAST_MODE = exports.AGENT_SIMULATION_MODE = exports.AGENT_MODE = void 0;
 /** Opt-in at page load; ordinary play keeps its existing behavior. */
 exports.AGENT_MODE = typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("agent") === "1";
+/** A hidden agent-only iframe permitted to restore privileged simulation snapshots. */
+exports.AGENT_SIMULATION_MODE = exports.AGENT_MODE &&
+    new URLSearchParams(window.location.search).get("simulator") === "1";
 exports.AGENT_FAST_MODE = false;
 function setAgentFastMode(enabled) { exports.AGENT_FAST_MODE = exports.AGENT_MODE && enabled; }
 exports.setAgentFastMode = setAgentFastMode;
@@ -37514,6 +37606,7 @@ function observeEntity(source) {
         facing: Number.isInteger(entity.direction) && entity.direction >= 0 && entity.direction < 8
             ? { dx: [0, 0, 1, -1, 1, -1, 1, -1][entity.direction], dy: [1, -1, 0, 0, 1, -1, -1, 1][entity.direction] } : null,
         spawner: entity.getAgentSpawnTraits?.() ?? null,
+        resource: entity.getAgentResourceTraits?.() ?? null,
         combat: {
             baseDamage: numberOrNull(entity.baseDamage),
             currentDamage: numberOrNull(entity.damage),
@@ -44513,7 +44606,7 @@ exports.captureFingerprint = captureFingerprint;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.formatReport = exports.validateRoundtrip = exports.diffFingerprints = exports.captureFingerprint = exports.devSaveAndLoadV2 = exports.loadSaveV2 = exports.devCaptureFingerprint = exports.devRoundtripWithReport = exports.devCreateAndValidateSaveV2 = exports.createSaveV2 = exports.registerBuiltinEnemyCodecsV2 = exports.registerBuiltinItemCodecsV2 = exports.registerBuiltinTileCodecsV2 = exports.tileRegistryV2 = exports.enemyRegistryV2 = exports.itemRegistryV2 = exports.validateSaveV2 = exports.parseSaveV2Json = exports.ok = exports.err = void 0;
+exports.sameFingerprint = exports.isLiveGameUnchanged = exports.createSimulationSnapshot = exports.formatReport = exports.validateRoundtrip = exports.diffFingerprints = exports.captureFingerprint = exports.devSaveAndLoadV2 = exports.loadSaveV2 = exports.devCaptureFingerprint = exports.devRoundtripWithReport = exports.devCreateAndValidateSaveV2 = exports.createSaveV2 = exports.registerBuiltinEnemyCodecsV2 = exports.registerBuiltinItemCodecsV2 = exports.registerBuiltinTileCodecsV2 = exports.tileRegistryV2 = exports.enemyRegistryV2 = exports.itemRegistryV2 = exports.validateSaveV2 = exports.parseSaveV2Json = exports.ok = exports.err = void 0;
 var errors_1 = __webpack_require__(/*! ./errors */ "./src/game/save/errors.ts");
 Object.defineProperty(exports, "err", ({ enumerable: true, get: function () { return errors_1.err; } }));
 Object.defineProperty(exports, "ok", ({ enumerable: true, get: function () { return errors_1.ok; } }));
@@ -44548,6 +44641,10 @@ var roundtripValidator_1 = __webpack_require__(/*! ./roundtripValidator */ "./sr
 Object.defineProperty(exports, "diffFingerprints", ({ enumerable: true, get: function () { return roundtripValidator_1.diffFingerprints; } }));
 Object.defineProperty(exports, "validateRoundtrip", ({ enumerable: true, get: function () { return roundtripValidator_1.validateRoundtrip; } }));
 Object.defineProperty(exports, "formatReport", ({ enumerable: true, get: function () { return roundtripValidator_1.formatReport; } }));
+var simulationSnapshot_1 = __webpack_require__(/*! ./simulationSnapshot */ "./src/game/save/simulationSnapshot.ts");
+Object.defineProperty(exports, "createSimulationSnapshot", ({ enumerable: true, get: function () { return simulationSnapshot_1.createSimulationSnapshot; } }));
+Object.defineProperty(exports, "isLiveGameUnchanged", ({ enumerable: true, get: function () { return simulationSnapshot_1.isLiveGameUnchanged; } }));
+Object.defineProperty(exports, "sameFingerprint", ({ enumerable: true, get: function () { return simulationSnapshot_1.sameFingerprint; } }));
 
 
 /***/ }),
@@ -49470,6 +49567,55 @@ exports.ITEM_KIND_VALUES_V2 = [
     // scrolls
     "scroll",
 ];
+
+
+/***/ }),
+
+/***/ "./src/game/save/simulationSnapshot.ts":
+/*!*********************************************!*\
+  !*** ./src/game/save/simulationSnapshot.ts ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sameFingerprint = exports.isLiveGameUnchanged = exports.createSimulationSnapshot = void 0;
+const fingerprint_1 = __webpack_require__(/*! ./fingerprint */ "./src/game/save/fingerprint.ts");
+const writeV2_1 = __webpack_require__(/*! ./writeV2 */ "./src/game/save/writeV2.ts");
+const validate_1 = __webpack_require__(/*! ./validate */ "./src/game/save/validate.ts");
+/** Capture a schema-validated, JSON-safe branch root without changing the live game. */
+function createSimulationSnapshot(game) {
+    const before = (0, fingerprint_1.captureFingerprint)(game);
+    const saved = (0, writeV2_1.createSaveV2)(game);
+    if (saved.ok === false)
+        return { ok: false, error: `Save failed: ${String(saved.error)}` };
+    const serialized = JSON.stringify(saved.value);
+    const parsed = (0, validate_1.parseSaveV2Json)(serialized);
+    if (parsed.ok === false)
+        return { ok: false, error: `Save validation failed: ${String(parsed.error)}` };
+    const after = (0, fingerprint_1.captureFingerprint)(game);
+    if (!sameFingerprint(before, after)) {
+        return { ok: false, error: "Creating a simulation snapshot mutated the live game" };
+    }
+    if (parsed.value.worldSpec.rngState !== before.rngState) {
+        return { ok: false, error: "Simulation snapshot RNG does not match the live game" };
+    }
+    return { ok: true, value: { save: parsed.value, serialized, fingerprint: before } };
+}
+exports.createSimulationSnapshot = createSimulationSnapshot;
+/**
+ * Guard used before and after branch evaluation. A branch runner must leave the
+ * visible game exactly as it was when this snapshot was captured.
+ */
+function isLiveGameUnchanged(game, snapshot) {
+    return sameFingerprint((0, fingerprint_1.captureFingerprint)(game), snapshot.fingerprint);
+}
+exports.isLiveGameUnchanged = isLiveGameUnchanged;
+function sameFingerprint(a, b) {
+    return JSON.stringify(a) === JSON.stringify(b);
+}
+exports.sameFingerprint = sameFingerprint;
 
 
 /***/ }),
@@ -66092,6 +66238,7 @@ const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/
 class FishingRod extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
+        this.getAgentCategories = () => ["tool", "fishing-tool"];
         this.disassemble = () => {
             this.level.game.pushMessage(`You dissassemble your ${this.name} into fragments.`);
             let inventory = this.level.game.players[this.level.game.localPlayerID].inventory;
@@ -79971,6 +80118,7 @@ const berries_1 = __webpack_require__(/*! ../item/usable/berries */ "./src/item/
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 class PlayerInputHandler {
     constructor(player) {
         this.keyboardTarget = null;
@@ -81103,7 +81251,7 @@ class PlayerInputHandler {
                                     return;
                                 const preferred = freeWalls.find((w) => w.dir === player.direction);
                                 const target = preferred ??
-                                    freeWalls[Math.floor(Math.random() * freeWalls.length)];
+                                    freeWalls[Math.floor(random_1.Random.rand() * freeWalls.length)];
                                 const fuel = item.fuel;
                                 let placed;
                                 if (item instanceof torch_1.Torch) {
@@ -98106,6 +98254,17 @@ class DownLadder extends passageway_1.Passageway {
         this.getName = () => {
             return this.isSidePath ? "rope down" : "staircase down";
         };
+        this.getTraversalTraits = () => {
+            const unlocked = !this.lockable.isLocked();
+            const player = this.game.players[this.game.localPlayerID];
+            const hasMatchingKey = !!player && this.lockable.keyID > 0 &&
+                this.lockable.hasKeyWithID(this.lockable.keyID, player) !== null;
+            return {
+                kind: "ladder", direction: "down", unlocked,
+                unlockableFromHere: unlocked || hasMatchingKey || gameConstants_1.GameConstants.DEVELOPER_MODE,
+                sidePath: this.isSidePath,
+            };
+        };
         this.examineText = () => {
             const locked = this.lockable?.isLocked?.() === true;
             if (this.isSidePath) {
@@ -98915,7 +99074,7 @@ class SpikeTrap extends tile_1.Tile {
             }
         };
         // Visible spike state only; phase counts remain internal simulation state.
-        this.getAgentHazardTraits = () => ({ kind: "spikes", active: this.on, warning: this.tickCount === 3 });
+        this.getAgentHazardTraits = () => ({ kind: "spikes", damage: 0.5, active: this.on, warning: this.tickCount === 3 });
         this.onCollideEnemy = (enemy) => {
             if (this.on && !(enemy instanceof crate_1.Crate || enemy instanceof barrel_1.Barrel))
                 enemy.hurt(null, 1);
@@ -100641,7 +100800,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("435f901ccb33ed16a120")
+/******/ 		__webpack_require__.h = () => ("a383f896ad5c830d8f7f")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */
