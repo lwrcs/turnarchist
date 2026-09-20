@@ -36646,6 +36646,8 @@ class AgentEnvironment {
         this.maxSteps = 1000;
         this.failure = null;
         this.recentTransitions = [];
+        /** Complete recorded history is retained only to recreate diagnostic sandboxes. */
+        this.sandboxActionHistory = [];
         this.contacts = new Map();
         this.contactKeys = new WeakMap();
         this.nextContactKey = 0;
@@ -36707,13 +36709,22 @@ class AgentEnvironment {
             throw new Error("Wait for the current operation before capturing a simulation snapshot");
         if (this.seed === null || !this.ready())
             throw new Error("Simulation snapshots require a ready initialized run");
-        // Combat and lighting sandboxes rewrite room geometry after seed generation.
-        // Save V2 deliberately records the seeded world, not those diagnostic-only
-        // rewrites, so restoring one would evaluate a different room.  Refuse rather
-        // than return a misleading hypothetical outcome until sandbox snapshots gain
-        // their own geometry payload.
         if (this.scenario !== "standard") {
-            throw new Error("Isolated previews currently require a standard seeded run; diagnostic sandboxes are not snapshot-complete");
+            // Testbeds are deterministic from their scenario and seed.  Rebuild the
+            // exact room in the child and replay recorded actions, rather than using
+            // Save V2 (which intentionally regenerates the ordinary seeded world).
+            return {
+                schemaVersion: 1,
+                source: "privileged-agent-snapshot",
+                createdAtStep: this.steps,
+                serialized: JSON.stringify({
+                    format: "diagnostic-sandbox-replay-v1",
+                    scenario: this.scenario,
+                    seed: this.seed,
+                    maxSteps: this.maxSteps,
+                    actions: this.sandboxActionHistory,
+                }),
+            };
         }
         const snapshot = (0, simulationSnapshot_1.createSimulationSnapshot)(this.game);
         if (snapshot.ok === false)
@@ -36736,6 +36747,18 @@ class AgentEnvironment {
             throw new Error("Invalid simulation snapshot payload");
         }
         return this.exclusive(async () => {
+            let envelope = null;
+            try {
+                envelope = JSON.parse(serialized);
+            }
+            catch { }
+            if (envelope?.format === "diagnostic-sandbox-replay-v1") {
+                if (!Number.isInteger(envelope.seed) || !Array.isArray(envelope.actions) || typeof envelope.scenario !== "string") {
+                    throw new Error("Invalid diagnostic sandbox snapshot");
+                }
+                await this.restoreDiagnosticSandbox(envelope.seed, envelope.scenario, envelope.actions, Number.isInteger(envelope.maxSteps) ? envelope.maxSteps : this.maxSteps);
+                return this.observe();
+            }
             const parsed = (0, validate_1.parseSaveV2Json)(serialized);
             if (parsed.ok === false)
                 throw new Error(`Simulation snapshot validation failed: ${String(parsed.error)}`);
@@ -36750,9 +36773,66 @@ class AgentEnvironment {
             this.nextContactKey = 0;
             this.memory.clear();
             this.recentTransitions = [];
+            this.sandboxActionHistory = [];
             await this.settle();
             return this.observe();
         });
+    }
+    async restoreDiagnosticSandbox(seed, scenario, actions, maxSteps) {
+        if (scenario === "standard" || (!(0, combatTestbed_1.isCombatScenario)(scenario) && !["forest", "cave"].includes(scenario))) {
+            throw new Error("Invalid diagnostic sandbox scenario");
+        }
+        this.game.replayManager.cancelReplay();
+        this.game.newGame(seed);
+        await this.settle();
+        if ((0, combatTestbed_1.isCombatScenario)(scenario))
+            this.game.startCombatSandbox(scenario, seed);
+        else
+            this.game.startLightingSandbox(scenario, seed);
+        this.scenario = scenario;
+        this.game.started = true;
+        this.game.startedFadeOut = true;
+        this.game.startMenuActive = false;
+        this.game.startMenu?.close();
+        this.seed = seed;
+        this.steps = 0;
+        this.maxSteps = maxSteps;
+        this.failure = null;
+        this.contacts.clear();
+        this.contactKeys = new WeakMap();
+        this.nextContactKey = 0;
+        this.memory.clear();
+        this.recentTransitions = [];
+        this.sandboxActionHistory = [];
+        await this.settle();
+        // Lighting sandboxes can begin on a diagnostic ladder.  reset() resolves
+        // that setup prompt before exposing actions; restoration must do the same
+        // or the child would reject legal world moves from the visible lab.
+        const playerAtSandboxStart = this.player();
+        if (playerAtSandboxStart.screenMessage.open &&
+            playerAtSandboxStart.getRoom().roomArray[playerAtSandboxStart.x]?.[playerAtSandboxStart.y] instanceof downLadder_1.DownLadder) {
+            playerAtSandboxStart.actionProcessor.process({ type: "LadderConfirm" });
+            await this.settle();
+        }
+        for (const action of actions) {
+            await this.settle();
+            const player = this.player();
+            if (action.type === "Move") {
+                const [direction, dx, dy] = directions[action.direction];
+                player.actionProcessor.process({ type: "Directional", direction, targetX: player.x + dx, targetY: player.y + dy });
+            }
+            else if (action.type === "SelectOption") {
+                if (!player.menu.selectChoice(action.index))
+                    throw new Error("Sandbox replay selection is unavailable");
+            }
+            else {
+                player.actionProcessor.process(action);
+            }
+            await this.settle();
+            this.steps++;
+            this.sandboxActionHistory.push({ ...action });
+        }
+        await this.settle();
     }
     tacticalFrame() {
         const player = this.player();
@@ -36842,6 +36922,7 @@ class AgentEnvironment {
             this.contactKeys = new WeakMap();
             this.nextContactKey = 0;
             this.recentTransitions = [];
+            this.sandboxActionHistory = [];
             this.maxSteps = maxSteps;
             this.vision = vision;
             await this.settle();
@@ -37361,6 +37442,13 @@ class AgentEnvironment {
                 before: beforeFrame, after: this.tacticalFrame() });
             if (this.recentTransitions.length > 8)
                 this.recentTransitions.shift();
+            // A diagnostic sandbox is rebuilt from its deterministic seed and this
+            // successful input history in isolated preview frames.  Do not preserve
+            // rejected/no-op requests, because replaying them can put the child at a
+            // different interaction boundary than the visible game.
+            if (this.scenario !== "standard" && recorded) {
+                this.sandboxActionHistory.push(JSON.parse(JSON.stringify(actionInput)));
+            }
             const observation = this.observe();
             return { observation: { ...observation, canExtendBudget: !observation.terminated && !this.failure, ready: !observation.terminated && !observation.truncated },
                 terminated: observation.terminated, truncated: observation.truncated,
@@ -100800,7 +100888,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("a383f896ad5c830d8f7f")
+/******/ 		__webpack_require__.h = () => ("7da7fdd1ce283d7a6cf4")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */
