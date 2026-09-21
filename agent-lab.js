@@ -184,6 +184,19 @@
         ? {type: 'Move', direction: action} : {type: action});
     });
   });
+  // Keep the lab playable without taking the focus away from the visible game.
+  // Inputs and menus retain their normal keyboard behavior.
+  window.addEventListener('keydown', event => {
+    if (event.defaultPrevented || event.repeat || event.metaKey || event.ctrlKey || event.altKey ||
+        event.target.closest?.('input, select, textarea, [contenteditable="true"]')) return;
+    const direction = {ArrowUp:'up',ArrowRight:'right',ArrowDown:'down',ArrowLeft:'left',
+      w:'up',d:'right',s:'down',a:'left'}[event.key];
+    if (!direction) return;
+    const button = document.querySelector(`[data-action="${direction}"]`);
+    if (!button || button.disabled) return;
+    event.preventDefault();
+    button.click();
+  });
   document.getElementById('export').onclick = () => run(() => {
     const replay = api().exportReplay();
     const url = URL.createObjectURL(new Blob([JSON.stringify(replay)], {type: 'application/json'}));
