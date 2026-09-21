@@ -7,6 +7,12 @@
 })(typeof globalThis!=='undefined'?globalThis:this,function(Host){
   const copy=value=>JSON.parse(JSON.stringify(value));
   const validBudget=value=>Number.isInteger(value)&&value>=1&&value<=10000;
+  const actionKey=action=>JSON.stringify(action);
+  const worldKey=view=>JSON.stringify({
+    room:view.room?.id,x:view.player?.x,y:view.player?.y,z:view.player?.z,
+    turn:view.player?.turnCount,coins:view.player?.coins,
+    inventory:(view.inventory??[]).map(item=>[item.slot,item.id??item.kind??item.name,item.stackCount??item.count??1]),
+  });
   const compactSelection=selected=>selected?{
     id:selected.id,
     action:copy(selected.action),
@@ -42,6 +48,7 @@
       if(!Number.isInteger(seed)||seed<0||seed>0xffffffff)throw new Error('seed must be a uint32');
       if(!validBudget(decisions))throw new Error('decisions must be 1..10000');
       this.running=true;this.stopping=false;this.simulator=this.createSimulator();
+      const suppressedZeroTurnInteractions=new Map();
       const report=this.report={schemaVersion:1,source:'stateful-deterministic-preview-evaluator',seed,scenario,
         decisionBudget:decisions,startedAt:new Date().toISOString(),status:'running',decisions:0,turns:0,
         roomsVisited:[],trace:[]};
@@ -53,7 +60,9 @@
           if(before.terminated){report.status='dead';break;}
           let action=interfaceAction(before),evaluation=null;
           if(!action&&before.decision==='world') {
-            const candidates=Host.candidateActions(this.agent.inspectOperator());
+            const suppressed=suppressedZeroTurnInteractions.get(worldKey(before))??new Set();
+            const candidates=Host.candidateActions(this.agent.inspectOperator())
+              .filter(candidate=>!suppressed.has(actionKey(candidate.action)));
             if(!candidates.length){report.status='no-legal-actions';break;}
             evaluation=await this.simulator.evaluateCandidates(candidates);
             action=evaluation.selected?.action??null;
@@ -61,6 +70,16 @@
           if(!action){report.status='unsupported-decision';break;}
           const step=await this.agent.step(copy(action));
           const after=copy(this.agent.observe());rooms.add(after.room.id);
+          // Opening a vending machine or another dismissable object can be a
+          // recorded zero-turn action that returns to the identical position
+          // after dismissal. Suppress that contact at this unchanged world
+          // state so it cannot become an infinite open/close loop. The key
+          // changes automatically after movement, time, money, or inventory.
+          if(before.decision==='world'&&step.info?.turnDelta===0&&
+              ['vending','dismissable-interaction'].includes(after.decision)) {
+            const key=worldKey(before),blocked=suppressedZeroTurnInteractions.get(key)??new Set();
+            blocked.add(actionKey(action));suppressedZeroTurnInteractions.set(key,blocked);
+          }
           report.decisions++;report.turns+=step.info?.turnDelta??0;report.roomsVisited=[...rooms];
           // Keep reports small. A full preview selection includes the complete
           // post-action operator observation, which grows into hundreds of MB
