@@ -40,6 +40,8 @@
   <button id="inventory-smoke">Run inventory check</button>
   <div><label>Action JSON <input id="action-json" size="55" value='{"type":"UseItem","slotIndex":0}'></label><button id="submit-action">Run action</button><button id="preview-action">Preview isolated</button><button id="preview-legal-actions">Preview all legal actions</button></div>
   <div id="action-feedback" role="status" aria-live="polite"></div>
+  <div><label>Evaluator decisions <input id="evaluator-decisions" type="number" value="40" min="1" max="10000"></label>
+  <button id="evaluator-run">Run stateful evaluator</button><button id="evaluator-stop">Stop evaluator</button></div>
   <div><label>Batch seeds <input id="batch-seeds" value="123,456,789"></label>
   <label>Decisions per seed <input id="batch-decisions" type="number" value="40" min="1" max="10000"></label>
   <button id="batch-run">Run baseline batch</button><button id="batch-stop">Stop batch</button><button id="batch-export">Export batch</button></div>
@@ -52,5 +54,6 @@
 <script src="./agent-baseline.js?v=26"></script>
 <script src="./agent-batch.js?v=8"></script>
 <script src="./agent-simulation-host.js?v=7"></script>
-<script src="./agent-lab.js?v=20"></script>
+<script src="./agent-evaluator-runner.js?v=2"></script>
+<script src="./agent-lab.js?v=21"></script>
 </html>
