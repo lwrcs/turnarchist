@@ -123,3 +123,62 @@ test('destroying a block is reported as destruction without player movement', as
   assert.deepEqual(outcome.objectsDestroyed, [{id:'b1',kind:'Block'}]);
   assert.equal(host.describeOutcome({outcome}), 'destroys block and stays in place');
 });
+
+test('goal-aware evaluation prefers the safe move with the shorter traversal route', () => {
+  const context = {stateVisits:new Map(),roomVisits:new Map([['room-a',1]]),previousRoomId:null,entryGoalIds:new Map()};
+  const outcome = distance => ({status:'settled',recorded:true,transition:null,threatsAfter:0,
+    playerDelta:{health:0,positionChanged:true,roomChanged:false,depthChanged:false},
+    playerAfter:{x:1,y:1},roomAfter:{id:'room-a',depth:0},decisionAfter:null,
+    enemiesKilled:[],enemiesDamaged:[],operatorAfter:{pathfinding:{pointsOfInterest:[
+      {kind:'door',traversal:{unlocked:true},route:{reachable:true,steps:Array.from({length:distance},()=>({}))}},
+    ]}}});
+  const left = {id:'move_left',outcome:outcome(3)};
+  const down = {id:'move_down',outcome:outcome(5)};
+  left.evaluation = host.evaluateOutcome(left,context);
+  down.evaluation = host.evaluateOutcome(down,context);
+  assert.ok(host.compareEvaluated(left,down) < 0);
+  assert.equal(left.evaluation.nearestTraversalDistance,3);
+});
+
+test('stateful evaluation penalizes immediate room reversal and remembers only live states', async () => {
+  let liveView = {player:{x:1,y:1,z:0,health:2,mana:1,coins:0,turnCount:0},decision:null,
+    room:{id:'room-a',depth:0,entities:[],hitWarnings:[]}};
+  const live = {observe:()=>liveView,captureSimulationSnapshot:()=>({serialized:'{}'})};
+  let childView = liveView;
+  const child = {
+    restoreSimulationSnapshot:async()=>{childView=liveView;},
+    observe:()=>childView,
+    inspectOperator:()=>({pathfinding:{pointsOfInterest:[{id:'entry',kind:'door',traversal:{unlocked:true},
+      route:{reachable:true,steps:[]}}]}}),
+    step:async action=>{
+      childView = liveView.room.id === 'room-b' && action.direction === 'left'
+        ? {player:{...liveView.player,x:1,turnCount:2},decision:null,room:{...liveView.room,id:'room-a'}}
+        : action.direction === 'right'
+        ? {player:{...liveView.player,x:2,turnCount:1},decision:null,room:{...liveView.room}}
+        : {player:{...liveView.player,x:9,turnCount:1},decision:null,room:{...liveView.room,id:'room-b'}};
+      return {terminated:false,truncated:false,info:{recorded:true,turnDelta:1}};
+    },
+  };
+  const simulator = new host.IsolatedSimulator({source:()=>live,createFrame:()=>({contentWindow:{agent:child}})});
+  await simulator.evaluateCandidates([{id:'move_right',action:{type:'Move',direction:'right'}}]);
+  liveView = {player:{...liveView.player,x:9,turnCount:1},decision:null,room:{...liveView.room,id:'room-b'}};
+  const report = await simulator.evaluateCandidates([
+    {id:'move_left',action:{type:'Move',direction:'left'}},
+    {id:'move_right',action:{type:'Move',direction:'right'}},
+  ]);
+  const backtrack = report.candidates.find(candidate=>candidate.id==='move_left');
+  assert.equal(report.policy.previousRoomId,'room-a');
+  assert.equal(backtrack.evaluation.backtracks,true);
+  assert.equal(simulator.roomVisits.has('room-b'),true);
+  assert.equal(simulator.roomVisits.has('room-a'),true);
+  assert.equal(simulator.roomVisits.has('room-c'),false);
+});
+
+test('fatal outcomes always rank below survivable outcomes', () => {
+  const context={stateVisits:new Map(),roomVisits:new Map(),previousRoomId:null,entryGoalIds:new Map()};
+  const fatal={id:'fatal',outcome:{transition:'death',recorded:true,playerDelta:{health:-2},roomAfter:{id:'goal'},playerAfter:{x:1,y:1}}};
+  const safe={id:'safe',outcome:{transition:null,recorded:true,threatsAfter:9,playerDelta:{health:-1,positionChanged:true},roomAfter:{id:'start'},playerAfter:{x:2,y:1}}};
+  fatal.evaluation=host.evaluateOutcome(fatal,context);
+  safe.evaluation=host.evaluateOutcome(safe,context);
+  assert.ok(host.compareEvaluated(safe,fatal)<0);
+});

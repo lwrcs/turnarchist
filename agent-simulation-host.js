@@ -65,6 +65,64 @@
     return String(left.id ?? left.action?.direction).localeCompare(String(right.id ?? right.action?.direction));
   }
 
+  const stateKey = view => `${view?.room?.id ?? 'unknown'}:${view?.player?.x ?? '?'}:${view?.player?.y ?? '?'}:${view?.decision ?? ''}`;
+  const traversableGoals = operator => (operator?.pathfinding?.pointsOfInterest ?? [])
+    .filter(point => ['door', 'ladder'].includes(point.kind))
+    .filter(point => point.traversal?.unlocked !== false || point.traversal?.unlockableFromHere === true ||
+      point.traversal?.unlockFromHere === true)
+    .filter(point => point.route?.reachable !== false);
+  const nearestGoalDistance = (operator, excludedGoalIds = new Set()) => {
+    const distances = traversableGoals(operator).filter(point => !excludedGoalIds.has(point.id))
+      .map(point => point.route?.steps?.length)
+      .filter(Number.isFinite);
+    return distances.length ? Math.min(...distances) : null;
+  };
+
+  function evaluateOutcome(candidate, context) {
+    const outcome = candidate.outcome ?? {};
+    const delta = outcome.playerDelta ?? {};
+    const roomAfter = outcome.roomAfter ?? {};
+    const endState = stateKey({room: roomAfter, player: outcome.playerAfter, decision: outcome.decisionAfter});
+    const stateVisits = context.stateVisits.get(endState) ?? 0;
+    const roomVisits = context.roomVisits.get(roomAfter.id) ?? 0;
+    const noEffect = !outcome.recorded && !delta.positionChanged && !delta.roomChanged && !delta.depthChanged;
+    const backtracks = delta.roomChanged && roomAfter.id === context.previousRoomId;
+    const discoversRoom = delta.roomChanged && roomVisits === 0;
+    const goalDistance = nearestGoalDistance(outcome.operatorAfter,
+      context.entryGoalIds.get(roomAfter.id) ?? new Set());
+    let utility = 0;
+    const reasons = [];
+    if (outcome.transition === 'death') reasons.push('fatal');
+    if (noEffect) { utility -= 100; reasons.push('no state change'); }
+    if ((delta.health ?? 0) < 0) { utility += delta.health * 40; reasons.push(`loses ${Math.abs(delta.health)} health`); }
+    if (Number.isFinite(outcome.threatsAfter)) {
+      utility -= outcome.threatsAfter * 8;
+      if (outcome.threatsAfter) reasons.push(`${outcome.threatsAfter} active threats after action`);
+    }
+    if (stateVisits) { utility -= stateVisits * 25; reasons.push(`returns to a state visited ${stateVisits} time${stateVisits === 1 ? '' : 's'}`); }
+    if (backtracks) { utility -= 60; reasons.push('immediately backtracks to the previous room'); }
+    if (discoversRoom) { utility += 50; reasons.push('enters an unvisited room'); }
+    else if (delta.roomChanged) { utility -= 15; reasons.push('enters an already visited room'); }
+    if (delta.depthChanged) { utility += 100; reasons.push('advances to another floor'); }
+    if (goalDistance !== null && !delta.roomChanged) {
+      utility -= goalDistance * 3;
+      reasons.push(`${goalDistance} safe path step${goalDistance === 1 ? '' : 's'} from the nearest traversal goal`);
+    }
+    if (delta.positionChanged) utility += 1;
+    if (outcome.enemiesKilled?.length) utility += outcome.enemiesKilled.length * 8;
+    if (outcome.enemiesDamaged?.length) utility += outcome.enemiesDamaged.length;
+    return {fatal: outcome.transition === 'death', utility, reasons, stateVisits, roomVisits,
+      backtracks, discoversRoom, nearestTraversalDistance: goalDistance};
+  }
+
+  function compareEvaluated(left, right) {
+    // Death is the sole unconditional policy priority. All nonfatal tradeoffs
+    // are contextual utility so progress can justify manageable damage.
+    if (left.evaluation.fatal !== right.evaluation.fatal) return left.evaluation.fatal ? 1 : -1;
+    if (left.evaluation.utility !== right.evaluation.utility) return right.evaluation.utility - left.evaluation.utility;
+    return String(left.id).localeCompare(String(right.id));
+  }
+
   function summary(action, before, after, result) {
     const damagingWarnings = view => (view.room?.hitWarnings ?? [])
       .filter(warning => warning.dangerous && warning.directionOnly !== true);
@@ -101,6 +159,8 @@
       },
       playerAfter: {x: after.player.x, y: after.player.y, z: after.player.z,
         health: after.player.health, mana: after.player.mana, coins: after.player.coins},
+      roomAfter: {id: after.room.id, depth: after.room.depth, roomType: after.room.roomType ?? after.room.type ?? null},
+      observationAfter: copy(after),
       enemiesKilled,
       enemiesDamaged,
       objectsDestroyed,
@@ -179,6 +239,12 @@
       });
       this.frame = null;
       this.pending = null;
+      this.stateVisits = new Map();
+      this.roomVisits = new Map();
+      this.lastLiveState = null;
+      this.lastLiveRoomId = null;
+      this.previousRoomId = null;
+      this.entryGoalIds = new Map();
     }
 
     async agent() {
@@ -205,11 +271,16 @@
         const result = await within(simulator.step(copy(action)), 3000,
           'Simulator action timed out; branch discarded');
         const after = copy(simulator.observe());
+        let operatorAfter = null;
+        if (typeof simulator.inspectOperator === 'function' && !result.terminated) {
+          try { operatorAfter = copy(simulator.inspectOperator()); }
+          catch { operatorAfter = null; }
+        }
         const liveAfter = copy(live.observe());
         if (JSON.stringify(liveBefore) !== JSON.stringify(liveAfter)) {
           throw new Error('Simulation preview changed the live game; preview discarded');
         }
-        return summary(action, before, after, result);
+        return {...summary(action, before, after, result), operatorAfter};
       } catch (error) {
         // AgentEnvironment marks its iframe failed after a timed-out action.
         // Never reuse that poisoned branch for a later preview.
@@ -235,6 +306,27 @@
       this.pending = (async () => {
         const live = this.source();
         const liveBefore = copy(live.observe());
+        const liveOperator = typeof live.inspectOperator === 'function' ? copy(live.inspectOperator()) : null;
+        const liveState = stateKey(liveBefore);
+        if (liveState !== this.lastLiveState) {
+          this.stateVisits.set(liveState, (this.stateVisits.get(liveState) ?? 0) + 1);
+          this.lastLiveState = liveState;
+        }
+        if (liveBefore.room?.id !== this.lastLiveRoomId) {
+          this.previousRoomId = this.lastLiveRoomId;
+          this.lastLiveRoomId = liveBefore.room?.id ?? null;
+          if (this.lastLiveRoomId) this.roomVisits.set(this.lastLiveRoomId,
+            (this.roomVisits.get(this.lastLiveRoomId) ?? 0) + 1);
+          if (this.previousRoomId && this.lastLiveRoomId) {
+            const goals = traversableGoals(liveOperator);
+            const nearest = goals.reduce((best, point) => {
+              const distance = point.route?.steps?.length;
+              return Number.isFinite(distance) && (!best || distance < best.distance)
+                ? {id:point.id,distance} : best;
+            }, null);
+            if (nearest) this.entryGoalIds.set(this.lastLiveRoomId, new Set([nearest.id]));
+          }
+        }
         const snapshot = live.captureSimulationSnapshot();
         const results = [];
         for (const candidate of candidates) {
@@ -249,13 +341,17 @@
         }
         // A branch that did not record the requested action is not a valid
         // simulation outcome.  Never present a silent no-op as a suggestion.
-        const settled = results.filter(result => result.outcome.status === 'settled' && result.outcome.recorded);
-        const ranked = settled.sort((left, right) => compareOutcomes(left.outcome, right.outcome));
-        return {schemaVersion: 1, candidates: results, ranked: ranked.map(result => ({
+        const context = {stateVisits: this.stateVisits, roomVisits: this.roomVisits,
+          previousRoomId: this.previousRoomId, entryGoalIds: this.entryGoalIds};
+        results.forEach(result => { result.evaluation = evaluateOutcome(result, context); });
+        const settled = results.filter(result => ['settled', 'terminated'].includes(result.outcome.status) && result.outcome.recorded);
+        const ranked = settled.sort(compareEvaluated);
+        return {schemaVersion: 2, policy:{survivalPriority:'death-only',previousRoomId:this.previousRoomId},
+          candidates: results, ranked: ranked.map(result => ({
           id: result.id, action: result.action, preview: result.preview, outcome: result.outcome,
-          rank: rankOutcome(result.outcome),
+          evaluation: result.evaluation,
         })), selected: ranked[0] ? {id: ranked[0].id, action: ranked[0].action,
-          preview: ranked[0].preview, outcome: ranked[0].outcome, rank: rankOutcome(ranked[0].outcome)} : null};
+          preview: ranked[0].preview, outcome: ranked[0].outcome, evaluation: ranked[0].evaluation} : null};
       })();
       try { return await this.pending; }
       finally { this.pending = null; }
@@ -267,5 +363,6 @@
     }
   }
 
-  return {IsolatedSimulator, candidateActions, compareOutcomes, rankOutcome, summary, describeOutcome};
+  return {IsolatedSimulator, candidateActions, compareOutcomes, rankOutcome, summary, describeOutcome,
+    evaluateOutcome, compareEvaluated, nearestGoalDistance};
 });

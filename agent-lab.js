@@ -25,7 +25,9 @@
         output.candidates.forEach(candidate => {
           const item = document.createElement('li');
           const direction = candidate.action?.direction ?? candidate.action?.type ?? candidate.id;
-          item.textContent = `${candidate.id === selectedId ? 'Recommended — ' : ''}${direction}: ${AgentSimulationHost.describeOutcome(candidate)}`;
+          const rationale = candidate.evaluation?.reasons?.length
+            ? ` [score ${candidate.evaluation.utility}: ${candidate.evaluation.reasons.join(', ')}]` : '';
+          item.textContent = `${candidate.id === selectedId ? 'Recommended — ' : ''}${direction}: ${AgentSimulationHost.describeOutcome(candidate)}${rationale}`;
           list.appendChild(item);
         });
         const note = document.createElement('div');
