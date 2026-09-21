@@ -11,7 +11,7 @@
     return agent;
   };
   async function run(operation) {
-    buttons.forEach(button => { button.disabled = button.id !== 'batch-stop'; });
+    buttons.forEach(button => { button.disabled = !['batch-stop','evaluator-stop'].includes(button.id); });
     status.textContent = 'Running…';
     try {
       const output = await operation();
@@ -49,7 +49,24 @@
     } finally { buttons.forEach(button => { button.disabled = false; }); }
   }
   let batchRunner;
+  let evaluatorRunner;
   let isolatedSimulator;
+  function renderCandidates(output,noteText='The live game did not change.') {
+    if(!output?.candidates?.length)return;
+    const selectedId=output.selected?.id??null;
+    actionFeedback.dataset.kind='success';
+    const heading=document.createElement('strong');
+    heading.textContent=`Evaluated ${output.candidates.length} legal ${output.candidates.length===1?'action':'actions'} from the same snapshot`;
+    const list=document.createElement('ul');
+    output.candidates.forEach(candidate=>{
+      const item=document.createElement('li'),direction=candidate.action?.direction??candidate.action?.type??candidate.id;
+      const rationale=candidate.evaluation?.reasons?.length?` [score ${candidate.evaluation.utility}: ${candidate.evaluation.reasons.join(', ')}]`:'';
+      item.textContent=`${candidate.id===selectedId?'Recommended — ':''}${direction}: ${AgentSimulationHost.describeOutcome(candidate)}${rationale}`;
+      list.appendChild(item);
+    });
+    const note=document.createElement('div');note.textContent=noteText;
+    actionFeedback.replaceChildren(heading,list,note);actionFeedback.style.display='block';
+  }
   const progress=p=>{status.textContent=`Seed ${p.seed} (${p.run}/${p.total}), decision ${p.decisions}, health ${p.health}`;};
   const summarizeBatch=report=>{
     window.lastBatchReport=report;
@@ -60,6 +77,24 @@
     return summarizeBatch(await batchRunner.resumeLast({decisions:Number(document.getElementById('resume-decisions').value),onProgress:progress}));
   });
   document.getElementById('batch-stop').onclick = () => batchRunner?.stop();
+  document.getElementById('evaluator-stop').onclick = () => evaluatorRunner?.stop();
+  document.getElementById('evaluator-run').onclick = () => run(async () => {
+    isolatedSimulator?.dispose?.();isolatedSimulator=null;
+    evaluatorRunner=new AgentEvaluatorRunner.Runner(api());
+    const report=await evaluatorRunner.run({
+      seed:Number(document.getElementById('seed').value),
+      decisions:Number(document.getElementById('evaluator-decisions').value),
+      scenario:document.getElementById('scenario').value,
+      onProgress:progress=>{
+        status.textContent=`Evaluator seed ${progress.seed}, decision ${progress.decisions}, depth ${progress.depth}, health ${progress.health}`;
+        if(progress.evaluation)renderCandidates(progress.evaluation,
+          `Applied ${progress.action.direction??progress.action.type} to the live game; now in room ${progress.room}.`);
+      },
+    });
+    window.lastEvaluatorReport=report;
+    return {...report,replay:{actions:report.replay?.replay?.actions?.length??0},
+      trace:report.trace.slice(-20)};
+  });
   document.getElementById('batch-run').onclick = () => run(async () => {
     batchRunner = new AgentBatch.Runner(api());
     const report=await batchRunner.run({
@@ -85,7 +120,10 @@
     setTimeout(()=>URL.revokeObjectURL(url),1000);
     return {exported:true,runs:report.runs.length};
   });
-  document.getElementById('reset').onclick = () => run(() => api().reset(Number(document.getElementById('seed').value), {scenario:document.getElementById('scenario').value}));
+  document.getElementById('reset').onclick = () => run(() => {
+    isolatedSimulator?.dispose?.();isolatedSimulator=null;
+    return api().reset(Number(document.getElementById('seed').value), {scenario:document.getElementById('scenario').value});
+  });
   document.getElementById('lighting-check').onclick = () => run(() => {
     const report = api().inspectLighting();
     const canvas = document.getElementById('light-map'), ctx=canvas.getContext('2d');
