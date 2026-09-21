@@ -1,59 +1,21 @@
 <!doctype html>
-<html lang="en">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Turnarchist agent lab</title>
 <style>
-  body { margin: 0; background: #15131c; color: #eee; font: 15px system-ui; }
-  main { padding: 20px; max-width: 1200px; margin: auto; }
-  h1 { margin: 0 0 8px; font-size: 24px; }
-  p { color: #c8c0d6; }
-  button, input { font: inherit; padding: 8px 12px; margin: 3px; }
-  button { cursor: pointer; }
-  iframe { display: block; box-sizing: border-box; border: 1px solid #514660; width: 100%; height: clamp(280px, 65vh, 580px); margin: 12px 0; }
-  input, select, canvas { box-sizing: border-box; max-width: 100%; }
-  label { display: inline-block; max-width: 100%; }
-  @media (max-width: 600px) { main { padding: 10px; } h1 { font-size: 20px; } }
-  pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow: auto; }
-  #action-feedback { display:none; margin:8px 0; padding:10px 12px; border:1px solid #6956a5; border-radius:6px; background:#211b31; color:#f1edff; }
-  #action-feedback[data-kind="error"] { border-color:#b54a57; background:#331b21; }
-  #action-feedback strong { color:#d8c9ff; }
-  #action-feedback ul { margin:8px 0; padding-left:22px; }
-  #action-feedback li { margin:4px 0; }
-</style>
-<main>
-  <h1>Turnarchist agent lab</h1>
-  <p><a href="./teach.html" style="color:#a8c3ff">Open human demonstrations and multi-agent teaching →</a></p>
-  <iframe id="game" title="Agent game" src="./play.html?agent=1"></iframe>
-  <p>Browser simulation · diagnostic room observations · run saves and player-stat uploads disabled</p>
-  <label>Seed <input id="seed" type="number" value="123" min="0" max="4294967295"></label>
-  <label>Scenario <select id="scenario"><option value="standard">Standard</option><option value="forest">Forest sandbox</option><option value="cave">Cave sandbox</option><option value="combat-skull">Combat: skeleton</option><option value="combat-zombie">Combat: zombie</option><option value="combat-bigskull">Combat: giant skeleton</option><option value="combat-bigzombie">Combat: giant zombie</option><option value="combat-armoredskull">Combat: armored skeleton</option><option value="combat-armoredzombie">Combat: armored zombie</option><option value="combat-armoredskull-alert">Combat: alert armored skeleton</option><option value="combat-armoredzombie-alert">Combat: alert armored zombie</option><option value="combat-bigskull-alert">Combat: alert giant skeleton</option><option value="combat-bigzombie-alert">Combat: alert giant zombie</option><option value="combat-giant-clutter">Combat: giant with clutter and support</option><option value="combat-armored-clutter">Combat: armored enemies with clutter</option><option value="combat-giant-clutter-low-health">Combat: giant clutter at one health</option><option value="combat-armored-clutter-low-health">Combat: armored clutter at one health</option><option value="combat-skull-pack">Combat: skeleton group</option><option value="combat-spawner">Combat: spawner</option><option value="combat-giant-pocket">Combat: giant wall pocket</option><option value="combat-skull-choke">Combat: skeleton choke point</option></select></label>
-  <button id="lighting-check">Inspect lighting</button>
-  <label><input id="super-fast" type="checkbox">Super fast (skip input cooldown)</label>
-  <button id="reset">Reset run</button>
-  <button data-action="up">Up</button><button data-action="down">Down</button>
-  <button data-action="left">Left</button><button data-action="right">Right</button>
-  <button data-action="LadderConfirm">Descend</button><button data-action="LadderCancel">Cancel descent</button>
-  <button id="observe">Observe</button><button id="perceive">Perceive</button><button id="export">Export replay</button>
-  <button id="extend">Allow 1,000 more decisions</button>
-  <button id="smoke">Run smoke check</button>
-  <button id="inventory-smoke">Run inventory check</button>
-  <div><label>Action JSON <input id="action-json" size="55" value='{"type":"UseItem","slotIndex":0}'></label><button id="submit-action">Run action</button><button id="preview-action">Preview isolated</button><button id="preview-legal-actions">Preview all legal actions</button></div>
-  <div id="action-feedback" role="status" aria-live="polite"></div>
-  <div><label>Evaluator decisions <input id="evaluator-decisions" type="number" value="40" min="1" max="10000"></label>
-  <button id="evaluator-run">Run stateful evaluator</button><button id="evaluator-stop">Stop evaluator</button></div>
-  <div><label>Batch seeds <input id="batch-seeds" value="123,456,789"></label>
-  <label>Decisions per seed <input id="batch-decisions" type="number" value="40" min="1" max="10000"></label>
-  <button id="batch-run">Run baseline batch</button><button id="batch-stop">Stop batch</button><button id="batch-export">Export batch</button></div>
-  <div><label>Additional decisions <input id="resume-decisions" type="number" value="250" min="1" max="10000"></label><button id="batch-resume">Continue last run</button></div>
-  <div><label>Trace seed <input id="trace-seed" type="number" value="123"></label><button id="batch-trace">Inspect batch trace</button></div>
-  <p id="status" role="status">Loading agent game…</p>
-  <canvas id="light-map" width="640" height="480" aria-label="Diagnostic lighting map"></canvas>
-  <pre id="result" aria-label="Agent result"></pre>
+:root{color-scheme:dark;font:15px system-ui;background:#14151b;color:#eeeff5}body{margin:0}main{max-width:1100px;margin:auto;padding:16px}h1{font-size:23px;margin:0}p{line-height:1.5;color:#c4c8d8}a{color:#a8c3ff}button,select,input{font:inherit;max-width:100%;padding:7px 9px;border:1px solid #575b6d;border-radius:7px;background:#242734;color:inherit}button{cursor:pointer}button:hover:not(:disabled){background:#303545}button:disabled{opacity:.4;cursor:default}button.primary{background:#445dc6;border-color:#748dff}button.danger{border-color:#a35e6d;color:#ffd8df}button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #94caff;outline-offset:3px}.topline,.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.topline{justify-content:space-between;margin-bottom:10px}.row{margin:8px 0}label{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.panel,details{background:#1b1e29;border:1px solid #414757;border-radius:9px;padding:11px 12px;margin:10px 0}.panel.subtle{background:#181b25}details summary{cursor:pointer;font-weight:650}details[open] summary{margin-bottom:8px}#stage{background:#0b0e15;border:1px solid #51576b;border-radius:10px;overflow:hidden}iframe{display:block;box-sizing:border-box;border:0;width:100%;height:clamp(280px,60vh,580px)}.game-tools{display:grid;grid-template-columns:auto minmax(220px,1fr);gap:14px;align-items:center}.pad{display:grid;grid-template-columns:repeat(3,42px);gap:5px}.pad button{height:38px;padding:0;font-size:19px;line-height:1}.pad .blank{visibility:hidden}.tool-stack{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.tool-stack button{font-size:13px;padding:6px 8px}.hint{font-size:13px;margin:0;color:#b5bbcf}.statusbar{margin:10px 0;padding:9px 11px;background:#242939;border:1px solid #606c93;border-radius:8px;color:#dce4ff}.statusbar:empty{display:none}#action-feedback{display:none;margin:8px 0;padding:10px 12px;border:1px solid #6956a5;border-radius:7px;background:#211b31;color:#f1edff}#action-feedback[data-kind="error"]{border-color:#b54a57;background:#331b21}#action-feedback strong{color:#d8c9ff}#action-feedback ul{margin:8px 0;padding-left:22px}#action-feedback li{margin:4px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;margin:0;font-size:12px;color:#d4d8e5}canvas{box-sizing:border-box;max-width:100%;height:auto;border-radius:7px;background:#17131c}.compact-input{width:88px}.wide-input{min-width:min(100%,360px)}@media(max-width:640px){main{padding:10px}.topline{align-items:flex-start}.game-tools{grid-template-columns:1fr}.pad{justify-self:center}.wide-input{min-width:0;width:100%}}
+</style></head><body><main>
+<div class="topline"><h1>Turnarchist agent lab</h1><a href="./teach.html">Human demonstrations and multi-agent teaching →</a></div>
+<div id="stage"><iframe id="game" title="Agent game" src="./play.html?agent=1"></iframe></div>
+<p class="hint">Browser simulation · diagnostic observations only · replay saves and player-stat uploads are disabled.</p>
+<section class="panel" aria-label="Game controls">
+  <div class="row"><label>Seed <input id="seed" class="compact-input" type="number" value="123" min="0" max="4294967295"></label><label>Scenario <select id="scenario"><option value="standard">Standard</option><option value="forest">Forest sandbox</option><option value="cave">Cave sandbox</option><option value="combat-skull">Combat: skeleton</option><option value="combat-zombie">Combat: zombie</option><option value="combat-bigskull">Combat: giant skeleton</option><option value="combat-bigzombie">Combat: giant zombie</option><option value="combat-armoredskull">Combat: armored skeleton</option><option value="combat-armoredzombie">Combat: armored zombie</option><option value="combat-armoredskull-alert">Combat: alert armored skeleton</option><option value="combat-armoredzombie-alert">Combat: alert armored zombie</option><option value="combat-bigskull-alert">Combat: alert giant skeleton</option><option value="combat-bigzombie-alert">Combat: alert giant zombie</option><option value="combat-giant-clutter">Combat: giant with clutter and support</option><option value="combat-armored-clutter">Combat: armored enemies with clutter</option><option value="combat-giant-clutter-low-health">Combat: giant clutter at one health</option><option value="combat-armored-clutter-low-health">Combat: armored clutter at one health</option><option value="combat-skull-pack">Combat: skeleton group</option><option value="combat-spawner">Combat: spawner</option><option value="combat-giant-pocket">Combat: giant wall pocket</option><option value="combat-skull-choke">Combat: skeleton choke point</option></select></label><button id="reset" class="primary">Reset run</button><label class="hint"><input id="super-fast" type="checkbox"> Super fast</label></div>
+  <div class="game-tools"><div class="pad" role="group" aria-label="Movement controls"><span class="blank"></span><button data-action="up" aria-label="Move up" aria-keyshortcuts="ArrowUp W">↑</button><span class="blank"></span><button data-action="left" aria-label="Move left" aria-keyshortcuts="ArrowLeft A">←</button><button data-action="down" aria-label="Move down" aria-keyshortcuts="ArrowDown S">↓</button><button data-action="right" aria-label="Move right" aria-keyshortcuts="ArrowRight D">→</button></div><div><div class="tool-stack"><button data-action="LadderConfirm">Descend</button><button data-action="LadderCancel">Cancel descent</button><button id="observe">Observe</button><button id="perceive">Perceive</button><button id="export">Export replay</button></div><p class="hint">Arrow keys or WASD move / attack. Keyboard input stays out of text fields and menus.</p></div></div>
+</section>
+<details open><summary>Stateful evaluator</summary><div class="row"><label>Decisions <input id="evaluator-decisions" class="compact-input" type="number" value="40" min="1" max="10000"></label><button id="evaluator-run" class="primary">Run evaluator</button><button id="evaluator-stop" class="danger">Stop</button></div><div id="action-feedback" role="status" aria-live="polite"></div></details>
+<details><summary>Batch runs</summary><div class="row"><label>Seeds <input id="batch-seeds" value="123,456,789"></label><label>Decisions each <input id="batch-decisions" class="compact-input" type="number" value="40" min="1" max="10000"></label><button id="batch-run" class="primary">Run baseline batch</button><button id="batch-stop" class="danger">Stop</button><button id="batch-export">Export batch</button></div><div class="row"><label>Additional decisions <input id="resume-decisions" class="compact-input" type="number" value="250" min="1" max="10000"></label><button id="batch-resume">Continue last run</button><label>Trace seed <input id="trace-seed" class="compact-input" type="number" value="123"></label><button id="batch-trace">Inspect trace</button></div></details>
+<details><summary>Preview and inspection</summary><div class="row"><label>Action JSON <input id="action-json" class="wide-input" value='{"type":"UseItem","slotIndex":0}'></label><button id="submit-action">Run action</button><button id="preview-action">Preview action</button><button id="preview-legal-actions">Preview all legal actions</button></div><div class="row"><button id="lighting-check">Inspect lighting</button><button id="extend">Allow 1,000 more decisions</button><button id="smoke">Run smoke check</button><button id="inventory-smoke">Run inventory check</button></div></details>
+<p id="status" class="statusbar" role="status">Loading agent game…</p>
+<details><summary>Diagnostics output</summary><canvas id="light-map" width="640" height="480" aria-label="Diagnostic lighting map"></canvas><pre id="result" aria-label="Agent result"></pre></details>
 </main>
-<script src="./agent-baseline.js?v=26"></script>
-<script src="./agent-batch.js?v=8"></script>
-<script src="./agent-simulation-host.js?v=7"></script>
-<script src="./agent-evaluator-runner.js?v=5"></script>
-<script src="./agent-lab.js?v=21"></script>
-</html>
+<script src="./agent-baseline.js?v=26"></script><script src="./agent-batch.js?v=8"></script><script src="./agent-simulation-host.js?v=7"></script><script src="./agent-evaluator-runner.js?v=5"></script><script src="./agent-lab.js?v=22"></script>
+</body></html>
