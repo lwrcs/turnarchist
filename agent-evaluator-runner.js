@@ -93,6 +93,11 @@
             depth:after.room.depth,evaluation,action:copy(action)});
           if(step.terminated){report.status='dead';break;}
           if(step.truncated){report.status='budget-incomplete';break;}
+          // Snapshot restoration replaces a complete game graph. Recycle the
+          // hidden browsing context periodically during long viewer runs so
+          // discarded graphs can be reclaimed; the simulator object's visit
+          // and room memory intentionally survives the frame replacement.
+          if(report.decisions%50===0)this.simulator.dispose();
           // Give rendering and the Stop button time between branch searches.
           await new Promise(resolve=>setTimeout(resolve,16));
         }
