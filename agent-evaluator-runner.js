@@ -11,7 +11,8 @@
   const worldKey=view=>JSON.stringify({
     room:view.room?.id,x:view.player?.x,y:view.player?.y,z:view.player?.z,
     turn:view.player?.turnCount,coins:view.player?.coins,
-    inventory:(view.inventory??[]).map(item=>[item.slot,item.id??item.kind??item.name,item.stackCount??item.count??1]),
+    inventory:(view.inventory??[]).filter(Boolean)
+      .map(item=>[item.slot,item.id??item.kind??item.name,item.stackCount??item.count??1]),
   });
   const compactSelection=selected=>selected?{
     id:selected.id,
