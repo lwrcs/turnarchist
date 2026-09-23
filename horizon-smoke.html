@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnarchist Horizon — isolated validation</title>
+<style>body{font:16px system-ui;margin:24px;max-width:1000px}iframe{width:640px;height:480px;border:1px solid}pre{white-space:pre-wrap}input{width:100px}button{padding:8px}</style>
+<h1>Horizon: dedicated browser validation</h1>
+<p>This page resets only its embedded test game. Keep active training and ordinary play in separate profiles/checkouts.</p>
+<label>Seed <input id="seed" type="number" value="1" min="0" max="4294967295"></label>
+<label>Scenario <input id="scenario" value="standard"></label>
+<button id="run" disabled>Run smoke test</button>
+<p id="status">Loading game…</p><iframe id="game" src="./play.html?agent=1" title="Dedicated validation game"></iframe>
+<pre id="report"></pre>
+<script src="./agent-simulation-host.js"></script><script src="./agent-horizon-core.js"></script>
+<script src="./agent-horizon-host.js"></script><script src="./training/horizon-smoke-session.js"></script><script src="./training/horizon-browser-smoke.js"></script>
+<script>
+'use strict';
+const frame = document.getElementById('game'), button = document.getElementById('run'), status = document.getElementById('status');
+let timer = setInterval(() => { if (frame.contentWindow?.agent) { clearInterval(timer); button.disabled = false; status.textContent = 'Ready. No test has run yet.'; } }, 100);
+button.onclick = async () => {
+  button.disabled = true; status.textContent = 'Testing the dedicated game…';
+  try { window.horizonSmokeResult = await AgentHorizonSmoke.run(frame.contentWindow.agent,
+    { seed: Number(document.getElementById('seed').value), scenario: document.getElementById('scenario').value,
+      onProgress: report => { status.textContent = report.phase + ' / ' + (report.operation?.name || 'checks'); document.getElementById('report').textContent = JSON.stringify(report, null, 2); } });
+    status.textContent = window.horizonSmokeResult.pass ? 'PASS — retain the report. This is smoke coverage, not exhaustive certification.' : 'FAIL / INCONCLUSIVE — inspect phase, error and special-value paths in the report.';
+  } catch (error) { window.horizonSmokeResult = { pass: false, error: String(error?.stack || error) }; status.textContent = 'FAIL / INCONCLUSIVE — do not enable training integration.'; }
+  finally { document.getElementById('report').textContent = JSON.stringify(window.horizonSmokeResult, null, 2); button.disabled = window.horizonSmokeResult?.pass !== true; }
+};
+</script></html>

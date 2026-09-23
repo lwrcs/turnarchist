@@ -1054,6 +1054,15 @@ export class Player extends Drawable {
     return this.pushMoveInputLockActive;
   };
 
+  /** Finish the same visual readiness gate when no renderer is being scheduled. */
+  advancePushMoveInputVisuals = (delta: number): void => {
+    if (!this.pushMoveInputLockActive) return;
+    for (const entity of this.pushMoveInputLockEntities) {
+      if (!entity.dead) entity.advanceMovementVisuals(delta);
+    }
+    this.updatePushMoveInputLock();
+  };
+
   /** Called from the renderer each frame to release the lock once visuals have mostly settled. */
   updatePushMoveInputLock = (): void => {
     if (!this.pushMoveInputLockActive) return;

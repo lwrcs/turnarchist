@@ -1,0 +1,45 @@
+import { HEALTH_METRIC, PLANNING_CAPABILITIES, PlanningDataError, planningEncode, assertPlanningEqual, withGrossHealthLoss } from './agentPlanning';
+let AGENT_SIMULATION_MODE = false;
+export function simulationMode(value: boolean) { AGENT_SIMULATION_MODE = value; }
+const GameplaySettings = { fixture: true }, GameConstants = { DEVELOPER_MODE: false };
+const directions: Record<string, [number,number,number]> = { up:[0,0,-1],right:[1,1,0],down:[2,0,1],left:[3,-1,0] };
+type AgentAction = { type: string; [key:string]: any };
+type GameAction = AgentAction;
+class AgentActionError extends Error { readonly code = 'AGENT_ACTION_REJECTED'; }
+class DownLadder {} class UpLadder {}
+type RoomFixture = {globalId:string;roomArray:Record<number,Record<number,any>>;entities:{x:number;y:number;z?:number;w?:number;h?:number;dead:boolean;collidable:boolean}[]};
+const isActionReady = (_:any) => true;
+const captureFingerprint = (game:any) => ({ player: { x:game.body.x, y:game.body.y, health:game.body.health, turnCount:game.body.turnCount } });
+export class LiveHarness {
+  timeoutMs=15000; busy=false; failure:string|null=null; seed:number|null=1; steps=0; maxSteps=64; scenario='standard';
+  recentTransitions:any[]=[]; sandboxActionHistory:any[]=[];
+  body:any={ x:0,y:0,z:0,health:5,maxHealth:5,mana:0,maxMana:0,turnCount:0,dead:false,
+    inventory:{items:[]},menu:{selectChoice:()=>true} };
+  count=0; decision='world'; calls:any[]=[]; settleHook: (()=>Promise<void>)|null=null;
+  effect: ((input:GameAction)=>void)|null=null;
+  game:any;
+  constructor() {
+    this.body.actionProcessor={process:(a:GameAction)=>{
+      this.calls.push({...a});
+      if(this.effect){this.effect(a);return;}
+      this.count++; this.body.turnCount++;
+      if(a.type==='Directional'){this.body.x=a.targetX;this.body.y=a.targetY;}
+      if(a.type==='DismissInteraction'||a.type==='LadderCancel')this.decision='world';
+    }};
+    this.game={body:this.body,replayManager:{getStats:()=>({count:this.count})}};
+  }
+  private player(): {health:number;getRoom:()=>RoomFixture;[key:string]:any} {return this.body;}
+  private planningReconstruction(){return null;}
+  contract(){return {buildId:'live-fixture',settings:'fixed'};}
+  private async settle(){if(this.settleHook)await this.settleHook();}
+  private tacticalFrame(){return {roomId:'A',player:{x:this.body.x,y:this.body.y,health:this.body.health},entities:[],warnings:[]};}
+  private encounterCleared(){return false;}
+  describeAction(_:AgentAction){return {turnCost:1};}
+  observe(){return {seed:this.seed,scenario:this.scenario,steps:this.steps,maxSteps:this.maxSteps,contract:this.contract(),
+    ready:!this.busy&&!this.failure&&!this.body.dead&&this.steps<this.maxSteps,
+    terminated:this.body.dead,truncated:!!this.failure||this.steps>=this.maxSteps,failure:this.failure,
+    player:{x:this.body.x,y:this.body.y,z:this.body.z,health:this.body.health,maxHealth:5,mana:0,maxMana:0,turnCount:this.body.turnCount},
+    room:{id:'A',depth:0,x:0,y:0,width:6,height:3,tiles:[] as {x:number;y:number;kind:string}[],entities:[],items:[],hitWarnings:[]},inventory:[],
+    decision:this.decision,selectionChoices:null,vendingMachine:null};}
+/*__LIVE_METHODS__*/
+}

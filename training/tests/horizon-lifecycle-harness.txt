@@ -1,0 +1,137 @@
+import { captureWarningContinuation, restoreWarningContinuation } from "./agentPlanningWarnings";
+import { capturePlanningInteraction, restorePlanningInteraction } from "./agentPlanningInteraction";
+import { capturePlanningPaths, restorePlanningPaths } from "./agentPlanningPaths";
+import { capturePlanningEmptyLoot, restorePlanningEmptyLoot } from "./agentPlanningEmptyLoot";
+import { capturePlanningAttachedLoot, restorePlanningAttachedLoot } from "./agentPlanningAttachedLoot";
+import { capturePlanningResources, restorePlanningResources } from "./agentPlanningResources";
+import { capturePlanningSpawners, restorePlanningSpawners } from "./agentPlanningSpawners";
+class FishingSpot {}
+class Spawner {}
+class Enemy { searchPathLocalizedCached() {} }
+const collectRoomsForSaveAtCurrentDepth = (_game: unknown): [] => [];
+class HitWarning { constructor(..._args: any[]) {} }
+const registerBuiltinItemCodecsV2 = () => {};
+const getItemKindV2 = (_item: any): any => null;
+const itemRegistryV2 = { get: (_kind: any): any => null };
+class Random { static state = 1; static setState(value: number) { this.state = value; } }
+class BombItem { constructor(..._args: any[]) {} globalId = ""; x = 0; y = 0; z = 0; stackCount = 1; pickedUp = false; groundedNoAnimate = false; }
+/* Source-extracted AgentEnvironment lifecycle with a SMALL SYNTHETIC WORLD.
+ * This is not the actual game's Room/Level/AI implementation or a game smoke test. */
+import { IdGenerator, IdGeneratorSnapshot } from "../globalStateManager/IdGenerator";
+import { PLANNING_FORMAT, PLANNING_CAPABILITIES, PLANNING_RECONSTRUCTION_FORMAT, PlanningReconstruction, PlanningDataError,
+  HEALTH_METRIC, planningEncode, serializePlanningEnvelope, parsePlanningEnvelope, assertPlanningEqual, withGrossHealthLoss } from "./agentPlanning";
+type AgentScenario = "standard" | "forest" | "cave" | "combat-fixture";
+type AgentAction = { type: "Move"; direction: "up" | "right" | "down" | "left" } | { type: "SelectOption"; index: number } |
+  { type: "LadderConfirm" | "LadderCancel" | "DismissInteraction" };
+type GameAction = any;
+type AgentTransition = any;
+interface AgentVision { radius: number }
+const DEFAULT_AGENT_VISION = { radius: 3 }, GameplaySettings = { fixture: true }, GameConstants = { DEVELOPER_MODE: false };
+const directions = { up: [0, 0, -1], right: [1, 1, 0], down: [2, 0, 1], left: [3, -1, 0] };
+let AGENT_SIMULATION_MODE = false;
+export function simulationMode(value: boolean) { AGENT_SIMULATION_MODE = value; }
+const isCombatScenario = (value: string) => value === "combat-fixture";
+const validateAgentVision = (value: AgentVision) => { if (!value || !Number.isFinite(value.radius)) throw new Error("Invalid vision"); return value; };
+class DownLadder {}
+class AgentActionError extends Error {}
+class World {
+  players: any = {}; localPlayerID = "local"; offlinePlayers: any = {};
+  started = true; startedFadeOut = true; startMenuActive = false; startMenu = { close() {} };
+  pending: Promise<void> | null = null; roomsById = new Map<string, any>(); levelsById = new Map<string, any>();
+  rng = 0; count = 0; sandboxEntry: IdGeneratorSnapshot | null = null; nextHook: (() => void) | null = null;
+  replayManager = { cancelReplay() {}, getStats: () => ({ count: this.count }) };
+  constructor() { this.newGame(0); }
+  newGame(seed: number) {
+    this.pending = null; this.rng = seed; this.count = 0;
+    for (let i = 0; i < 3 + seed % 4; i++) IdGenerator.generate("discarded-main");
+    this.players = { local: this.makePlayer() }; this.roomsById = new Map(); this.levelsById = new Map();
+  }
+  makePlayer(): any {
+    const game = this;
+    return { id: "local", health: 5, maxHealth: 5, x: 4, y: 4, z: 0, turnCount: 0, dead: false,
+      roomGID: "", screenMessage: { open: false }, menu: { selectChoice: (_: number) => false },
+      getRoom() { return game.roomsById.get(this.roomGID); },
+      actionProcessor: { process(action: any) { game.process(action); } } };
+  }
+  startLightingSandbox(scenario: string, seed: number) { this.startSandbox(scenario, seed, false); }
+  startCombatSandbox(scenario: string, seed: number) { this.startSandbox(scenario, seed, true); }
+  startSandbox(scenario: string, seed: number, combat: boolean) {
+    this.sandboxEntry = IdGenerator.captureSimulationState();
+    this.rng = seed; this.count = 0; this.roomsById = new Map(); this.levelsById = new Map();
+    const level: any = { globalId: IdGenerator.generate("L"), roomsById: new Map() };
+    const room: any = { globalId: IdGenerator.generate("R"), level, roomArray: [], pathId: "main", entities: [] };
+    this.levelsById.set(level.globalId, level); this.roomsById.set(room.globalId, room); level.roomsById.set(room.globalId, room);
+    for (let i = 0; i < 5; i++) IdGenerator.generate("T");
+    const player = this.makePlayer(); IdGenerator.generate("E"); player.roomGID = room.globalId;
+    this.players = { local: player }; room.roomArray[4] = []; room.roomArray[4][4] = combat ? {} : new DownLadder();
+    player.screenMessage.open = !combat;
+    room.entities.push({ id: IdGenerator.generate("EN"), kind: scenario, health: 3 });
+    // An optional fixture fault simulates a changed construction contract, not a fallback.
+    this.nextHook?.(); this.nextHook = null;
+  }
+  process(action: any) {
+    const player = this.players.local;
+    if (action.type === "LadderConfirm") {
+      player.screenMessage.open = false; const staging = player.getRoom();
+      this.pending = Promise.resolve().then(() => {
+        const level: any = { globalId: IdGenerator.generate("L"), roomsById: new Map() };
+        const room: any = { globalId: IdGenerator.generate("R"), level, roomArray: [], pathId: "sp:main", entities: [], parentId: staging.globalId };
+        this.levelsById.set(level.globalId, level); this.roomsById.set(room.globalId, room); level.roomsById.set(room.globalId, room);
+        room.roomArray[4] = []; room.roomArray[4][4] = {}; staging.childId = room.globalId;
+        room.entities.push({ id: IdGenerator.generate("EN"), health: 3, kind: "fixture-skeleton" });
+        player.roomGID = room.globalId;
+      });
+      this.count++; return;
+    }
+    if (action.type === "Directional") {
+      player.x = action.targetX; player.y = action.targetY; player.turnCount++; this.count++;
+      this.rng = (Math.imul(this.rng, 1664525) + 1013904223) >>> 0;
+      // Exercise allocations AFTER the root, not only initial room IDs.
+      player.getRoom().entities.push({ id: IdGenerator.generate("EN"), kind: "spawn", health: 2 });
+    }
+  }
+  validateReferences(): boolean {
+    const player = this.players.local, room = player.getRoom();
+    if (!room || room.globalId !== player.roomGID || this.levelsById.get(room.level.globalId) !== room.level ||
+      room.level.roomsById.get(room.globalId) !== room || !IdGenerator.isReserved(player.roomGID)) return false;
+    for (const value of this.roomsById.values()) {
+      if (value.parentId && this.roomsById.get(value.parentId)?.childId !== value.globalId) return false;
+      if (value.entities.some((entity: any) => !IdGenerator.isReserved(entity.id))) return false;
+    }
+    return true;
+  }
+}
+const captureFingerprint = (game: World) => ({ rngState: game.rng,
+  playerFingerprints: [{ id: game.players.local.id, roomPathId: game.players.local.roomGID,
+    x: game.players.local.x, y: game.players.local.y, health: game.players.local.health, turnCount: game.players.local.turnCount }],
+  roomFingerprints: Array.from(game.roomsById.values()).map((room: any) => ({ id: room.globalId, parentId: room.parentId,
+    childId: room.childId, entities: structuredClone(room.entities) })) });
+function createSimulationSnapshot(_: World): any { throw new Error("Synthetic lifecycle harness does not model Save V2"); }
+function parseSaveV2Json(_: string): any { throw new Error("Synthetic lifecycle harness does not model Save V2"); }
+async function loadSaveV2(_: World, __: any): Promise<any> { throw new Error("Synthetic lifecycle harness does not model Save V2"); }
+export class LifecycleHarness {
+  game = new World(); scenario: AgentScenario = "standard"; seed: number | null = null; steps = 0; maxSteps = 1000;
+  busy = false; failure: string | null = null; vision = { ...DEFAULT_AGENT_VISION }; recentTransitions: any[] = [];
+  sandboxActionHistory: AgentAction[] = []; planningSandboxOrigin: IdGeneratorSnapshot | null = null;
+  contacts = new Map(); contactKeys = new WeakMap(); nextContactKey = 0; memory = { clear() {} };
+  private player() { return this.game.players.local; }
+  private ready() { return !this.game.pending; }
+  private async settle() { const pending = this.game.pending; if (pending) { await pending; if (this.game.pending === pending) this.game.pending = null; } }
+  private async exclusive<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.busy || this.failure) throw new Error("Busy or failed harness"); this.busy = true;
+    try { return await operation(); } finally { this.busy = false; }
+  }
+  contract() { return { buildId: "synthetic-lifecycle-v1" }; }
+  observe() { const player = this.player(); return { seed: this.seed, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps,
+    roomId: player.roomGID, player: { x: player.x, y: player.y, turnCount: player.turnCount, health: player.health }, fingerprint: captureFingerprint(this.game) }; }
+  async step(input: AgentAction) {
+    if (input.type !== "Move") throw new Error("Synthetic fixture exercises Move only");
+    await this.settle(); const [direction, dx, dy] = directions[input.direction], player = this.player();
+    player.actionProcessor.process({ type: "Directional", direction, targetX: player.x + dx, targetY: player.y + dy });
+    await this.settle(); this.steps++; this.sandboxActionHistory.push({ ...input });
+    return { terminated: false, truncated: false, info: { recorded: true, turnDelta: 1 } };
+  }
+/*__METHODS__*/
+/*__LIFECYCLE__*/
+}
+export { IdGenerator };

@@ -1758,6 +1758,51 @@ export class Game {
     this.preLevelGenHoldBlack = false;
   }
 
+  /**
+   * Off-screen planning frames cannot rely on requestAnimationFrame to finish
+   * the presentation-only fade which starts level generation.  Run the same
+   * queued generation callback immediately; callers must restrict this to an
+   * isolated simulator.
+   */
+  public async completePreLevelGenFadeForSimulation(): Promise<boolean> {
+    if (!this.preLevelGenFadeActive || this.preLevelGenActionStarted || !this.preLevelGenAction) return false;
+    this.preLevelGenFadeActive = false;
+    this.preLevelGenHoldBlack = true;
+    this.preLevelGenActionStarted = true;
+    const action = this.preLevelGenAction;
+    this.preLevelGenAction = null;
+    try { await action(); }
+    finally {
+      this.preLevelGenFadeActive = false;
+      this.preLevelGenHoldBlack = false;
+      this.preLevelGenAction = null;
+      this.preLevelGenActionStarted = false;
+      this.preLevelGenFadeAlpha = 0;
+      this.preLevelGenFadeStartMs = 0;
+      this.preLevelGenFadeDurationMs = 0;
+    }
+    return true;
+  }
+
+  /**
+   * The ladder room handoff normally occurs in draw() once the outgoing
+   * dither reaches black. Hidden planning frames may not draw, so perform the
+   * same handoff at the same presentation threshold without advancing a turn.
+   */
+  public completeLadderTransitionForSimulation(): boolean {
+    if (this.levelState !== LevelState.TRANSITIONING_LADDER || !this.transitioningLadder) return false;
+    const deadFrames = 6;
+    const ditherFrame = Math.floor(
+      ((7 * 2 + deadFrames) * (Date.now() - this.transitionStartTime)) /
+        LevelConstants.LEVEL_TRANSITION_TIME_LADDER,
+    );
+    if (ditherFrame < 7 + deadFrames) return false;
+    this.setActiveRoom(this.transitioningLadder.linkedRoom);
+    this.room.enterLevel(this.players[this.localPlayerID]);
+    this.transitioningLadder = null;
+    return true;
+  }
+
   /** Draw UI that should remain visible even during temporary blackout/fade (cursor, fps, version). */
   private drawCursorFpsVersionOverlay(delta: number): void {
     try {

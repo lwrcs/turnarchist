@@ -220,6 +220,8 @@
     return parts.join('; ');
   }
 
+  const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
   class IsolatedSimulator {
     constructor({source, createFrame} = {}) {
       if (typeof source !== 'function') throw new Error('An agent source function is required');
@@ -250,9 +252,12 @@
     async agent() {
       if (!this.frame) this.frame = this.createFrame();
       const deadline = Date.now() + 15000;
-      while (!this.frame.contentWindow?.agent) {
+      while (!this.frame.contentWindow?.agent ||
+        typeof this.frame.contentWindow.agent.restoreSimulationSnapshot !== 'function' ||
+        typeof this.frame.contentWindow.agent.step !== 'function' ||
+        typeof this.frame.contentWindow.agent.observe !== 'function') {
         if (Date.now() >= deadline) throw new Error('Hidden simulator did not finish loading');
-        await new Promise(resolve => setTimeout(resolve, 25));
+        await wait(25);
       }
       const agent = this.frame.contentWindow.agent;
       // A branch preview must settle immediately and independently of the
@@ -265,12 +270,14 @@
       const live = this.source();
       const simulator = await this.agent();
       try {
-        await within(simulator.restoreSimulationSnapshot(snapshot.serialized), 3000,
+        await within(simulator.restoreSimulationSnapshot(snapshot.serialized), 8000,
           'Simulator restore timed out; branch discarded');
         const before = copy(simulator.observe());
-        const result = await within(simulator.step(copy(action)), 3000,
+        if (!before?.player || !before?.room) throw new Error('Simulator restore returned an incomplete game observation');
+        const result = await within(simulator.step(copy(action)), 8000,
           'Simulator action timed out; branch discarded');
         const after = copy(simulator.observe());
+        if (!after?.player || !after?.room) throw new Error('Simulator action returned an incomplete game observation');
         let operatorAfter = null;
         if (typeof simulator.inspectOperator === 'function' && !result.terminated) {
           try { operatorAfter = copy(simulator.inspectOperator()); }
@@ -289,13 +296,29 @@
       }
     }
 
+    async simulateBranch(snapshot, action, liveBefore) {
+      // A timeout intentionally marks AgentEnvironment as failed. Retrying in
+      // the same iframe can never recover, so dispose it and retry once from a
+      // clean browser context. This keeps a single sick candidate from making
+      // every subsequent preview unavailable.
+      let firstError = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try { return await this.simulateFromSnapshot(snapshot, action, liveBefore); }
+        catch (error) {
+          firstError ??= error;
+          if (attempt === 0) await wait(50);
+        }
+      }
+      throw firstError;
+    }
+
     async simulate(action) {
       if (this.pending) throw new Error('Another simulation preview is in progress');
       this.pending = (async () => {
         const live = this.source();
         const liveBefore = copy(live.observe());
         const snapshot = live.captureSimulationSnapshot();
-        return this.simulateFromSnapshot(snapshot, action, liveBefore);
+        return this.simulateBranch(snapshot, action, liveBefore);
       })();
       try { return await this.pending; }
       finally { this.pending = null; }
@@ -331,7 +354,7 @@
         const results = [];
         for (const candidate of candidates) {
           try {
-            results.push({...candidate, outcome: await this.simulateFromSnapshot(snapshot, candidate.action, liveBefore)});
+            results.push({...candidate, outcome: await this.simulateBranch(snapshot, candidate.action, liveBefore)});
           } catch (error) {
             results.push({...candidate, outcome: {status: 'unsupported', action: copy(candidate.action),
               transition: null, playerDelta: {}, recorded: false,

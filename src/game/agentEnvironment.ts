@@ -16,6 +16,25 @@ import type { GameAction } from "../player/playerAction";
 import { createSimulationSnapshot } from "./save/simulationSnapshot";
 import { loadSaveV2 } from "./save/loadV2";
 import { parseSaveV2Json } from "./save/validate";
+import { captureFingerprint } from "./save/fingerprint";
+import { collectRoomsForSaveAtCurrentDepth } from "./save/writeV2";
+import { HitWarning } from "../drawable/hitWarning";
+import { captureWarningContinuation, restoreWarningContinuation } from "./agentPlanningWarnings";
+import { capturePlanningInteraction, restorePlanningInteraction } from "./agentPlanningInteraction";
+import { capturePlanningPaths, restorePlanningPaths } from "./agentPlanningPaths";
+import { capturePlanningEmptyLoot, restorePlanningEmptyLoot } from "./agentPlanningEmptyLoot";
+import { capturePlanningAttachedLoot, restorePlanningAttachedLoot } from "./agentPlanningAttachedLoot";
+import { capturePlanningResources, restorePlanningResources } from "./agentPlanningResources";
+import { capturePlanningSpawners, restorePlanningSpawners } from "./agentPlanningSpawners";
+import { FishingSpot } from "../entity/object/fishingSpot";
+import { Enemy } from "../entity/enemy/enemy";
+import { Spawner } from "../entity/enemy/spawner";
+import { PLANNING_FORMAT, PLANNING_CAPABILITIES, PLANNING_RECONSTRUCTION_FORMAT, PlanningReconstruction, PlanningDataError, HEALTH_METRIC, planningEncode, serializePlanningEnvelope, parsePlanningEnvelope, assertPlanningEqual, withGrossHealthLoss } from "./agentPlanning";
+import { IdGenerator, IdGeneratorSnapshot } from "../globalStateManager/IdGenerator";
+import { Random } from "../utility/random";
+import { getItemKindV2, registerBuiltinItemCodecsV2 } from "./save/registry/itemsBuiltins";
+import { itemRegistryV2 } from "./save/registry/items";
+import { BombItem } from "../item/bombItem";
 
 export type AgentAction =
   | { type: "Move"; direction: "up" | "down" | "left" | "right" }
@@ -83,6 +102,8 @@ export class AgentEnvironment {
   private recentTransitions: AgentTransition[] = [];
   /** Complete recorded history is retained only to recreate diagnostic sandboxes. */
   private sandboxActionHistory: AgentAction[] = [];
+  /** Allocation state BEFORE diagnostic construction, not the branch's current counter. */
+  private planningSandboxOrigin: IdGeneratorSnapshot | null = null;
   private contacts = new Map<string, {id:string; step:number; x:number; y:number; previous?:{step:number;x:number;y:number}}>();
   private contactKeys = new WeakMap<object,string>();
   private nextContactKey = 0;
@@ -90,6 +111,193 @@ export class AgentEnvironment {
 
   constructor(private game: Game, private timeoutMs = 15000) {}
   setFastMode(enabled: boolean) { setAgentFastMode(enabled === true); }
+  /** Versioned privileged continuation; never exposed through perceive(). */
+  getPlanningCapabilities() { return { ...PLANNING_CAPABILITIES }; }
+  capturePlanningSnapshot() {
+    if (this.busy || this.failure) throw new Error("Planning requires an idle healthy agent");
+    const inner = this.captureSimulationSnapshot();
+    const serialized = serializePlanningEnvelope({
+      format: PLANNING_FORMAT,
+      inner,
+      runtime: {
+        seed: this.seed!, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps,
+        vision: this.vision, recentTransitions: this.recentTransitions,
+        // Save V2 omits warning ownership/phase; carry it only in privileged v3 continuation.
+        warningContinuation: this.scenario === "standard"
+          ? captureWarningContinuation(collectRoomsForSaveAtCurrentDepth(this.game)) : null,
+        interactionContinuation: this.scenario === "standard"
+          ? capturePlanningInteraction(this.player(), tile => tile?.constructor === DownLadder) : null,
+        pathContinuation: this.scenario === "standard"
+          ? capturePlanningPaths(collectRoomsForSaveAtCurrentDepth(this.game),
+            e => e instanceof Enemy && (e as any).searchPathLocalizedCached === (Enemy.prototype as any).searchPathLocalizedCached) : null,
+        emptyLootContinuation: this.scenario === "standard"
+          ? capturePlanningEmptyLoot(collectRoomsForSaveAtCurrentDepth(this.game)) : null,
+        attachedLootContinuation: this.scenario === "standard"
+          ? capturePlanningAttachedLoot(collectRoomsForSaveAtCurrentDepth(this.game), item => {
+            registerBuiltinItemCodecsV2();
+            // BombItem is an ordinary drop but predates Save V2's item registry. Keep this
+            // planning-only envelope local; do not broaden the production save contract.
+            if (item instanceof BombItem) return { kind: "planning_bomb_item", gid: item.globalId,
+              x: item.x, y: item.y, z: item.z, stackCount: item.stackCount, pickedUp: item.pickedUp,
+              groundedNoAnimate: item.groundedNoAnimate === true };
+            const kind = getItemKindV2(item), codec = kind && itemRegistryV2.get(kind);
+            if (!kind || !codec) throw new PlanningDataError("PLANNING_ATTACHED_LOOT_UNSUPPORTED",
+              "/runtime/attachedLootContinuation", `No item codec for ${item?.constructor?.name ?? "unknown"}`);
+            return codec.save(item, { game: this.game, nowMs: 0 });
+          }) : null,
+        resourceContinuation: this.scenario === "standard"
+          ? capturePlanningResources(collectRoomsForSaveAtCurrentDepth(this.game), e => e instanceof FishingSpot) : null,
+        // Save V2 restores existing gids but intentionally does not own the process allocator.
+        // The isolated branch needs the live frontier so newly spawned entities keep exact identity.
+        allocatorContinuation: this.scenario === "standard" ? IdGenerator.captureSimulationState() : null,
+        // Perception IDs are agent-private but participate in exact observation parity.
+        // Preserve their live frontier so first sight of a new room does not restart at c1.
+        contactContinuation: {
+          entries: [...this.contacts].map(([key, contact]) => [key, {
+            ...contact, previous: contact.previous ? { ...contact.previous } : undefined,
+          }]),
+          nextContactKey: this.nextContactKey,
+        },
+        spawnerContinuation: this.scenario === "standard"
+          ? capturePlanningSpawners(collectRoomsForSaveAtCurrentDepth(this.game), e => e instanceof Spawner) : null,
+      },
+      context: this.planningContext(),
+      fingerprint: captureFingerprint(this.game),
+      reconstruction: this.planningReconstruction(),
+    });
+    return { schemaVersion: 3, source: "privileged-horizon-snapshot", serialized };
+  }
+  private planningReconstruction(): PlanningReconstruction | null {
+    if (this.scenario === "standard") return null;
+    if (!this.planningSandboxOrigin) throw new PlanningDataError("PLANNING_ID_ORIGIN_MISSING", "/reconstruction/origin",
+      "Diagnostic run predates identity capture; reset this diagnostic run and recapture");
+    return { format: PLANNING_RECONSTRUCTION_FORMAT, origin: this.planningSandboxOrigin,
+      frontier: IdGenerator.captureSimulationState() };
+  }
+  private planningContext() {
+    return { contract: this.contract(), settings: { ...GameplaySettings }, developerMode: GameConstants.DEVELOPER_MODE };
+  }
+  /** Opaque JSON-safe guard, encoded before JSON can discard optional values. */
+  getPlanningGuard() {
+    if (this.busy || this.failure) throw new Error("Planning requires an idle healthy agent");
+    return this.planningGuardValue();
+  }
+  /** Same lossless guard, usable at the owned live dispatch boundary. */
+  private planningGuardValue() {
+    return planningEncode({ context: this.planningContext(), fingerprint: captureFingerprint(this.game),
+      seed: this.seed, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps,
+      reconstruction: this.planningReconstruction() });
+  }
+  async restorePlanningSnapshot(serialized: string) {
+    if (!AGENT_SIMULATION_MODE) throw new Error("Planning restore requires an isolated simulator");
+    if (this.busy || this.failure) throw new Error("Planning requires an idle healthy agent");
+    const envelope = parsePlanningEnvelope(serialized);
+    const vision = validateAgentVision(envelope.runtime.vision as AgentVision);
+    assertPlanningEqual(envelope.context, this.planningContext(), "PLANNING_CONTEXT_MISMATCH", "/context");
+    this.scenario = "standard";
+    await this.restoreSimulationSnapshot(envelope.inner.serialized, envelope.reconstruction?.origin);
+    assertPlanningEqual({ seed: envelope.runtime.seed, scenario: envelope.runtime.scenario },
+      { seed: this.seed, scenario: this.scenario }, "PLANNING_RUNTIME_MISMATCH", "/runtime");
+    this.steps = envelope.runtime.steps;
+    this.maxSteps = envelope.runtime.maxSteps;
+    this.vision = vision;
+    // Decoding already owns these values; do not run them through lossy JSON again.
+    this.recentTransitions = envelope.runtime.recentTransitions as AgentTransition[];
+    if (envelope.runtime.contactContinuation != null) {
+      const continuation = envelope.runtime.contactContinuation as {
+        entries: [string, {id:string;step:number;x:number;y:number;previous?:{step:number;x:number;y:number}}][];
+        nextContactKey: number;
+      };
+      this.contacts.clear();
+      for (const [key, contact] of continuation.entries) this.contacts.set(key, {
+        ...contact, previous: contact.previous ? { ...contact.previous } : undefined,
+      });
+      this.nextContactKey = continuation.nextContactKey;
+    }
+    if (envelope.runtime.spawnerContinuation != null) {
+      if (this.scenario !== "standard") throw new PlanningDataError("PLANNING_SPAWNER_CONTINUATION_UNSUPPORTED",
+        "/runtime/spawnerContinuation", "Diagnostic replay must recreate its own spawners");
+      restorePlanningSpawners(envelope.runtime.spawnerContinuation, collectRoomsForSaveAtCurrentDepth(this.game),
+        e => e instanceof Spawner);
+    }
+    if (envelope.runtime.warningContinuation != null) {
+      if (this.scenario !== "standard") throw new PlanningDataError("PLANNING_WARNING_CONTINUATION_UNSUPPORTED",
+        "/runtime/warningContinuation", "Diagnostic replay must recreate its own warning graph");
+      restoreWarningContinuation(envelope.runtime.warningContinuation, collectRoomsForSaveAtCurrentDepth(this.game),
+        (state, parent) => new HitWarning(this.game, state.x, state.y, state.eX, state.eY,
+          state.isEnemy, state.dirOnly, parent as any));
+    }
+    if (envelope.runtime.interactionContinuation != null) {
+      if (this.scenario !== "standard") throw new PlanningDataError("PLANNING_INTERACTION_UNSUPPORTED",
+        "/runtime/interactionContinuation", "Diagnostic replay must recreate its own interaction");
+      restorePlanningInteraction(envelope.runtime.interactionContinuation, this.player(), Object.values(this.game.players),
+        tile => tile?.constructor === DownLadder);
+    }
+    if (envelope.runtime.pathContinuation != null) {
+      if (this.scenario !== "standard") throw new PlanningDataError("PLANNING_PATH_CONTINUATION_UNSUPPORTED",
+        "/runtime/pathContinuation", "Diagnostic replay must recreate its own cached paths");
+      restorePlanningPaths(envelope.runtime.pathContinuation, collectRoomsForSaveAtCurrentDepth(this.game),
+        e => e instanceof Enemy && (e as any).searchPathLocalizedCached === (Enemy.prototype as any).searchPathLocalizedCached);
+    }
+    if (envelope.runtime.emptyLootContinuation != null) {
+      if (this.scenario !== "standard") throw new PlanningDataError("PLANNING_EMPTY_LOOT_UNSUPPORTED",
+        "/runtime/emptyLootContinuation", "Diagnostic replay must recreate its own loot");
+      restorePlanningEmptyLoot(envelope.runtime.emptyLootContinuation, collectRoomsForSaveAtCurrentDepth(this.game));
+    }
+    if (envelope.runtime.attachedLootContinuation != null) {
+      if (this.scenario !== "standard") throw new PlanningDataError("PLANNING_ATTACHED_LOOT_UNSUPPORTED",
+        "/runtime/attachedLootContinuation", "Diagnostic replay must recreate its own loot");
+      const rngState = Random.state;
+      try {
+        restorePlanningAttachedLoot(envelope.runtime.attachedLootContinuation,
+          collectRoomsForSaveAtCurrentDepth(this.game), (saved, room) => {
+            registerBuiltinItemCodecsV2();
+            if (saved.kind === "planning_bomb_item") {
+              const item = new BombItem(room as any, saved.x, saved.y);
+              item.globalId = saved.gid; item.z = saved.z; item.stackCount = saved.stackCount;
+              item.pickedUp = saved.pickedUp; item.groundedNoAnimate = saved.groundedNoAnimate;
+              return item;
+            }
+            const codec = itemRegistryV2.get(saved.kind);
+            if (!codec) throw new PlanningDataError("PLANNING_ATTACHED_LOOT_UNSUPPORTED",
+              "/runtime/attachedLootContinuation", `No item codec for ${saved.kind}`);
+            const item = codec.spawn(saved, room as any, { game: this.game });
+            item.level = room as any;
+            return item;
+          });
+      } finally { Random.setState(rngState); }
+    }
+    if (envelope.runtime.resourceContinuation != null) {
+      if (this.scenario !== "standard") throw new PlanningDataError("PLANNING_RESOURCE_CONTINUATION_UNSUPPORTED",
+        "/runtime/resourceContinuation", "Diagnostic replay must recreate its own resource state");
+      restorePlanningResources(envelope.runtime.resourceContinuation, collectRoomsForSaveAtCurrentDepth(this.game),
+        e => e instanceof FishingSpot);
+    }
+    // Continuation reconstruction may allocate temporary replacement objects. Restore the
+    // captured live frontier only after all such objects have received their saved identities.
+    if (envelope.runtime.allocatorContinuation != null) {
+      if (this.scenario !== "standard") throw new PlanningDataError("PLANNING_ID_CONTINUATION_UNSUPPORTED",
+        "/runtime/allocatorContinuation", "Diagnostic reconstruction owns its allocator checkpoints");
+      IdGenerator.restoreSimulationState(envelope.runtime.allocatorContinuation);
+    }
+    assertPlanningEqual(envelope.fingerprint, captureFingerprint(this.game),
+      "PLANNING_FINGERPRINT_MISMATCH", "/fingerprint");
+    if (envelope.reconstruction) {
+      // Verify the independently replayed allocator. Never force frontier state to fit a test.
+      assertPlanningEqual(envelope.reconstruction.frontier, IdGenerator.captureSimulationState(),
+        "PLANNING_ALLOCATOR_MISMATCH", "/reconstruction/frontier");
+    }
+    return this.observe();
+  }
+  async stepForPlanning(input: AgentAction) {
+    if (!AGENT_SIMULATION_MODE) throw new Error("Planning steps require an isolated simulator");
+    if (this.busy || this.failure) throw new Error("Planning requires an idle healthy agent");
+    const player = this.player();
+    const measured = await withGrossHealthLoss(player, () => this.step(input));
+    if (this.player() !== player) throw new Error("Planning action replaced the player; metric coverage is unknown");
+    return { ...measured.result, planning: { schemaVersion: 1, metric: HEALTH_METRIC, healthLoss: measured.healthLoss } };
+  }
+
   getUiLayout() {
     const player=this.player();
     return {...player.inventory.getAgentUiLayout(),
@@ -126,6 +334,99 @@ export class AgentEnvironment {
   }
 
   private player() { return this.game.players[this.game.localPlayerID]; }
+
+  /** Lightweight read-only geometry for goal selection. It makes NO safety predictions. */
+  inspectHorizonRoom() {
+    if (this.busy || this.failure) throw new Error("Goal inspection requires an idle healthy agent");
+    const room = this.player().getRoom(), view = this.observe();
+    return { schemaVersion: 1, privileged: true, roomId: room.globalId,
+      tiles: view.room.tiles.map(t => {
+        const tile = room.roomArray[t.x]?.[t.y];
+        return { ...t, z: tile?.z ?? 0, solid: tile?.isSolid?.() ?? true,
+          exit: tile instanceof DownLadder || tile instanceof UpLadder, isDoor: tile?.isDoor === true,
+          traversal: (tile as unknown as { getTraversalTraits?: () => object })?.getTraversalTraits?.() ?? null };
+      }),
+      occupied: room.entities.filter(e => !e.dead && e.collidable).map(e =>
+        ({ x: e.x, y: e.y, z: e.z ?? 0, width: e.w || 1, height: e.h || 1 })) };
+  }
+
+  // HORIZON_LIVE_V1: opt-in measured ordinary execution; not a simulation restore.
+  private horizonDispatch: {
+    action: AgentAction; guard: unknown; view: Record<string, unknown>;
+    signal?: AbortSignal; dispatched: boolean; player: { health: number }; deadline: number;
+  } | null = null;
+
+  getHorizonExecutionCapabilities() {
+    return { version: 1, mode: "ordinary-agent-step", metric: HEALTH_METRIC,
+      precondition: "dispatch-guard-v1", cancellation: "before-dispatch-or-after-settlement" };
+  }
+
+  /**
+   * Execute ONE authorized action through ordinary step(), never through the simulator.
+   * Cancellation cannot undo an admitted game action; its settlement/metric is still awaited.
+   * This method validates state, not the caller's proof of safety; the Horizon host supplies it.
+   */
+  async stepForHorizon(input: AgentAction, authorization: {
+    guard: string; view: string; signal?: AbortSignal; maxDispatchDelayMs?: number;
+  }) {
+    const enteredAt = performance.now();
+    if (AGENT_SIMULATION_MODE) throw new Error("Live Horizon execution requires a non-simulator agent");
+    if (this.busy || this.failure || this.horizonDispatch) throw new Error("Live execution requires an idle healthy agent");
+    if (!authorization || typeof authorization.guard !== "string" || typeof authorization.view !== "string" ||
+        !authorization.guard.length || !authorization.view.length ||
+        authorization.guard.length + authorization.view.length > 24_000_000) {
+      throw new Error("Invalid Horizon execution authorization");
+    }
+    const guard: unknown = JSON.parse(authorization.guard);
+    const view: Record<string, unknown> = JSON.parse(authorization.view);
+    if (!view || typeof view !== "object" || Array.isArray(view)) throw new Error("Invalid Horizon view precondition");
+    const signal = authorization.signal;
+    if (signal && typeof signal.aborted !== "boolean") throw new Error("Invalid Horizon cancellation signal");
+    const delay = authorization.maxDispatchDelayMs ?? this.timeoutMs;
+    if (!Number.isFinite(delay) || delay < 0 || delay > 600000) throw new Error("Invalid Horizon dispatch deadline");
+    const request = { ...input };
+    const player = this.player();
+    const permit = { action: request, guard, view, signal, dispatched: false, player, deadline: enteredAt + delay };
+    this.horizonDispatch = permit;
+    try {
+      const measured = await withGrossHealthLoss(player, () => this.step(request));
+      if (this.player() !== player) throw new Error("Live action replaced the player; health metric coverage is unknown");
+      return { ...measured.result, horizon: { schemaVersion: 1, metric: HEALTH_METRIC,
+        healthLoss: measured.healthLoss, dispatched: permit.dispatched } };
+    } catch (error) {
+      // A stale/cancelled precondition is a rejection, not a poisoned game episode.
+      const cause = (error as { horizonCause?: Error })?.horizonCause;
+      if (cause) throw cause;
+      throw error;
+    } finally { if (this.horizonDispatch === permit) this.horizonDispatch = null; }
+  }
+
+  /** Called immediately before the ordinary processor, after settle and validation. */
+  private assertHorizonDispatch(input: AgentAction): void {
+    const permit = this.horizonDispatch;
+    if (!permit) return; // Ordinary evaluators retain their exact dispatch behavior.
+    try {
+      if (permit.signal?.aborted) throw new PlanningDataError("HORIZON_CANCELLED", "/execution", "Cancelled before dispatch");
+      if (this.player() !== permit.player) throw new PlanningDataError("HORIZON_STALE_STATE", "/player", "Player object changed before dispatch");
+      assertPlanningEqual(permit.action, input, "HORIZON_ACTION_MISMATCH", "/action");
+      assertPlanningEqual(permit.guard, this.planningGuardValue(), "HORIZON_STALE_STATE", "/guard");
+      // Keep in exact parity with AgentHorizonHost.viewIdentity(). No physical field is removed.
+      const observation = this.observe() as unknown as Record<string, unknown>;
+      const view: Record<string, unknown> = {};
+      for (const key of ["seed", "scenario", "steps", "maxSteps", "contract", "player", "room", "inventory",
+        "decision", "selectionChoices", "vendingMachine", "terminated", "truncated", "failure"]) {
+        if (observation[key] !== undefined) view[key] = observation[key];
+      }
+      assertPlanningEqual(permit.view, view, "HORIZON_STALE_STATE", "/observation");
+      if (permit.signal?.aborted || performance.now() >= permit.deadline) {
+        throw new PlanningDataError("HORIZON_CANCELLED", "/execution", "Cancelled or expired before dispatch");
+      }
+      permit.dispatched = true;
+    } catch (error) {
+      // exclusive() already knows this class is a non-poisoning, unrecorded rejection.
+      throw Object.assign(new AgentActionError(String((error as Error)?.message || error)), { horizonCause: error });
+    }
+  }
 
   contract() { return getAgentContract(); }
   checkCompatibility(trainedOn: Partial<AgentContract> | null) {
@@ -170,7 +471,7 @@ export class AgentEnvironment {
    * Available only inside an agent iframe opened with `simulator=1`. The
    * visible game never restores hypothetical branches into itself.
    */
-  async restoreSimulationSnapshot(serialized: string) {
+  async restoreSimulationSnapshot(serialized: string, planningOrigin?: IdGeneratorSnapshot) {
     if (!AGENT_SIMULATION_MODE) throw new Error("Simulation snapshots can only be restored in an isolated simulator");
     if (typeof serialized !== "string" || serialized.length === 0 || serialized.length > 20_000_000) {
       throw new Error("Invalid simulation snapshot payload");
@@ -183,11 +484,18 @@ export class AgentEnvironment {
           throw new Error("Invalid diagnostic sandbox snapshot");
         }
         await this.restoreDiagnosticSandbox(envelope.seed, envelope.scenario as AgentScenario, envelope.actions,
-          Number.isInteger(envelope.maxSteps) ? envelope.maxSteps : this.maxSteps);
+          Number.isInteger(envelope.maxSteps) ? envelope.maxSteps : this.maxSteps, planningOrigin);
         return this.observe();
       }
+      if (planningOrigin) throw new PlanningDataError("PLANNING_RECONSTRUCTION_INVALID", "/reconstruction",
+        "Allocator origin is valid only for diagnostic reconstruction");
+      this.planningSandboxOrigin = null;
       const parsed = parseSaveV2Json(serialized);
       if (parsed.ok === false) throw new Error(`Simulation snapshot validation failed: ${String(parsed.error)}`);
+      // As with diagnostic reconstruction, finish bootstrap/previous transitions
+      // before Save V2 clears the world. Old generation callbacks must not replace
+      // the player or room while a new branch is loading or stepping.
+      await this.settle();
       const loaded = await loadSaveV2(this.game, parsed.value);
       if (loaded.ok === false) throw new Error(`Simulation snapshot load failed: ${String(loaded.error)}`);
       this.seed = parsed.value.worldSpec.seed;
@@ -204,13 +512,27 @@ export class AgentEnvironment {
     });
   }
 
-  private async restoreDiagnosticSandbox(seed: number, scenario: AgentScenario, actions: AgentAction[], maxSteps: number) {
+  private async restoreDiagnosticSandbox(seed: number, scenario: AgentScenario, actions: AgentAction[], maxSteps: number, planningOrigin?: IdGeneratorSnapshot) {
     if (scenario === "standard" || (!isCombatScenario(scenario) && !["forest", "cave"].includes(scenario))) {
       throw new Error("Invalid diagnostic sandbox scenario");
     }
+    // HORIZON_V14_BOOTSTRAP_BARRIER: window.agent is published before the
+    // iframe's initial newGame() finishes asynchronous world construction.
+    // Match reset(): finish that world before starting another generation.
+    // Otherwise its late callbacks can allocate IDs inside the reconstructed
+    // sandbox, even though we restored the correct allocator origin below.
+    await this.settle();
     this.game.replayManager.cancelReplay();
     this.game.newGame(seed);
     await this.settle();
+    // The staging world is replaced synchronously by start*Sandbox below. Restore here,
+    // after newGame has settled and BEFORE any diagnostic Level/Room/Tile is allocated.
+    // IDs, lookup maps, ladder links, and generated descendants then agree by construction.
+    if (planningOrigin) {
+      if (!AGENT_SIMULATION_MODE) throw new Error("Allocator replay requires an isolated simulator");
+      IdGenerator.restoreSimulationState(planningOrigin);
+    }
+    this.planningSandboxOrigin = IdGenerator.captureSimulationState();
     if (isCombatScenario(scenario)) this.game.startCombatSandbox(scenario, seed);
     else this.game.startLightingSandbox(scenario, seed);
     this.scenario = scenario;
@@ -286,7 +608,24 @@ export class AgentEnvironment {
       // simulator explicitly pumps it until the player owns the next turn.
       // This is isolated from the visible game and stops as soon as ready().
       if (AGENT_SIMULATION_MODE) {
+        // Down-ladder generation normally begins only after a rendered fade.
+        // Hidden planning frames may receive no RAF at all, so advance only
+        // that presentation boundary and await its original callback.
+        await this.game.completePreLevelGenFadeForSimulation?.();
+        // The destination-room handoff is likewise owned by the rendered
+        // ladder transition. Preserve its normal dither threshold when an
+        // off-screen planning frame has no draw cadence.
+        this.game.completeLadderTransitionForSimulation?.();
         this.game.update();
+        // A completed push can still hold the input gate until its visual
+        // interpolation advances. Offscreen RAF is not guaranteed. Pump only
+        // that interpolation (not drawing/death effects or another game turn),
+        // and retain the ordinary progress threshold used by the renderer.
+        this.game.players[this.game.localPlayerID]?.advancePushMoveInputVisuals(1);
+        // Last-enemy kills can start an exit-unlock camera pan. It is a
+        // skippable presentation, not a world action; without draw/RAF it
+        // otherwise holds ready() forever after the attack already completed.
+        if (this.game.cameraAnimation?.active) this.game.skipCameraAnimation();
         if (this.ready()) break;
       }
       await new Promise(resolve => setTimeout(resolve, 10));
@@ -321,6 +660,7 @@ export class AgentEnvironment {
       this.game.replayManager.cancelReplay();
       this.game.newGame(seed);
       await this.settle();
+      this.planningSandboxOrigin = scenario === "standard" ? null : IdGenerator.captureSimulationState();
       if (isCombatScenario(scenario)) this.game.startCombatSandbox(scenario, seed);
       else if (scenario !== "standard") this.game.startLightingSandbox(scenario, seed);
       this.scenario = scenario;
@@ -774,6 +1114,7 @@ export class AgentEnvironment {
       } else if (actionInput.type !== "SelectOption") action = actionInput;
       const prediction = this.describeAction(actionInput);
       const count = this.game.replayManager.getStats().count;
+      this.assertHorizonDispatch(actionInput);
       if (actionInput.type === "SelectOption") {
         if (!player.menu.selectChoice(actionInput.index)) throw new AgentActionError("Selection is disabled or unavailable");
       } else {

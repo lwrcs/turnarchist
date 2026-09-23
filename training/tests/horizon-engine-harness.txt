@@ -1,0 +1,57 @@
+import { captureWarningContinuation, restoreWarningContinuation } from "./agentPlanningWarnings";
+import { capturePlanningInteraction, restorePlanningInteraction } from "./agentPlanningInteraction";
+import { capturePlanningPaths, restorePlanningPaths } from "./agentPlanningPaths";
+import { capturePlanningEmptyLoot, restorePlanningEmptyLoot } from "./agentPlanningEmptyLoot";
+import { capturePlanningAttachedLoot, restorePlanningAttachedLoot } from "./agentPlanningAttachedLoot";
+import { capturePlanningResources, restorePlanningResources } from "./agentPlanningResources";
+import { capturePlanningSpawners, restorePlanningSpawners } from "./agentPlanningSpawners";
+class FishingSpot {}
+class Spawner {}
+class Enemy { searchPathLocalizedCached() {} }
+class DownLadder {}
+const registerBuiltinItemCodecsV2 = () => {};
+const getItemKindV2 = (_item: any): any => null;
+const itemRegistryV2 = { get: (_kind: any): any => null };
+class Random { static state = 1; static setState(value: number) { this.state = value; } }
+class BombItem { constructor(..._args: any[]) {} globalId = ""; x = 0; y = 0; z = 0; stackCount = 1; pickedUp = false; groundedNoAnimate = false; }
+const collectRoomsForSaveAtCurrentDepth = (_game: unknown): [] => [];
+class HitWarning { constructor(..._args: any[]) {} }
+import { IdGenerator, IdGeneratorSnapshot } from "../globalStateManager/IdGenerator";
+import { PLANNING_FORMAT, PLANNING_CAPABILITIES, PLANNING_RECONSTRUCTION_FORMAT, PlanningReconstruction, PlanningDataError, HEALTH_METRIC, planningEncode, serializePlanningEnvelope, parsePlanningEnvelope, assertPlanningEqual, withGrossHealthLoss, planningDecode } from "./agentPlanning";
+type AgentScenario = "standard" | "forest" | "cave";
+interface AgentVision { radius: number }
+interface AgentTransition { step: number }
+interface AgentAction { type: string }
+let AGENT_SIMULATION_MODE = true;
+export function simulationMode(value: boolean) { AGENT_SIMULATION_MODE = value; }
+const GameplaySettings = { fixture: true };
+const GameConstants = { DEVELOPER_MODE: false };
+const validateAgentVision = (vision: AgentVision) => { if (!vision || !Number.isFinite(vision.radius)) throw new Error("Invalid vision"); return vision; };
+const captureFingerprint = (game: { fingerprint: unknown }) => structuredClone(game.fingerprint);
+export class EngineHarness {
+  scenario: AgentScenario = "standard"; seed: number | null = 5; steps = 7; maxSteps = 20;
+  busy = false; failure: string | null = null;
+  vision: AgentVision = { radius: 3 }; recentTransitions: AgentTransition[] = [{ step: 7 }];
+  contacts = new Map<string, {id:string;step:number;x:number;y:number;previous?:{step:number;x:number;y:number}}>();
+  contactKeys = new WeakMap<object,string>(); nextContactKey = 0;
+  game: { fingerprint: any; players: any } = { fingerprint: { rngState: 100, x: 3, health: 5 }, players: {} };
+  planningSandboxOrigin: IdGeneratorSnapshot | null = IdGenerator.captureSimulationState();
+  lossyRestore = false;
+  body = { health: 5, x: 0, y: 0, z: 0, screenMessage: { open: false }, getRoom: () => ({}) };
+  private player() { return this.body; }
+  contract() { return { actionSchema: 5 }; }
+  observe() { return { seed: this.seed, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps, vision: this.vision, recentTransitions: this.recentTransitions }; }
+  captureSimulationSnapshot() { return { schemaVersion: 1, source: "privileged-agent-snapshot", createdAtStep: this.steps,
+    serialized: JSON.stringify({ seed: this.seed, scenario: this.scenario, maxSteps: this.maxSteps, actions: [], format: "diagnostic-sandbox-replay-v1", fingerprint: planningEncode(this.game.fingerprint) }) }; }
+  async restoreSimulationSnapshot(serialized: string, origin?: IdGeneratorSnapshot) {
+    if (origin) { IdGenerator.restoreSimulationState(origin); this.planningSandboxOrigin = origin; }
+    const value = JSON.parse(serialized); this.seed = value.seed;
+    if (value.scenario !== "standard") this.scenario = value.scenario;
+    this.steps = 0; this.maxSteps = 1000; this.recentTransitions = []; this.vision = { radius: 1 };
+    this.game.fingerprint = planningDecode(value.fingerprint);
+    if (this.lossyRestore) this.game.fingerprint = JSON.parse(JSON.stringify(this.game.fingerprint));
+  }
+  async step(_: AgentAction) { this.steps++; this.body.health--; await Promise.resolve(); this.body.health++;
+    return { terminated: false, truncated: false, info: { recorded: true, turnDelta: 1 } }; }
+/*__METHODS__*/
+}
