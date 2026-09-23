@@ -743,6 +743,11 @@ export class Entity extends Drawable {
     this.updateShadeColor(delta);
     //this.updateBloom(delta);
 
+    this.advanceMovementVisuals(delta);
+  };
+
+  /** Movement interpolation only: safe to advance without drawing or death effects. */
+  advanceMovementVisuals = (delta: number): void => {
     if (!this.doneMoving()) {
       const speed = this.isPushAnimating()
         ? this.getPushEaseInDecayBase()

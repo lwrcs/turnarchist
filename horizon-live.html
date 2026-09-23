@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnarchist · Horizon Live</title><link rel="stylesheet" href="./horizon-live.css"></head>
+<body>
+<header><div><p class="eyebrow">TURNARCHIST / AGENT LAB</p><h1>Horizon Live</h1><p class="subtitle">Choose a goal. Search in isolation. Execute one verified action. Replan.</p></div><span class="badge">OPT-IN · PRIVILEGED ORACLE</span></header>
+<main>
+<section class="viewer panel" aria-label="Live game viewer">
+<div class="panel-heading"><h2>Live world</h2><span id="world-label">Not initialized</span></div>
+<div class="game-shell"><iframe id="game" title="Dedicated live agent world; read-only viewer" src="about:blank" tabindex="-1" inert></iframe><div class="input-shield" aria-hidden="true"></div></div>
+<p class="caption">This is the ordinary live game, not the simulation. Manual game input is blocked in this viewer; the controller is its only action source.</p>
+<div class="readouts"><div><span>Verified actions</span><strong id="actions">0</strong></div><div><span>Simulations</span><strong id="simulations">0</strong></div><div><span>Gross health lost</span><strong id="health">0</strong></div><div><span>Goals reached</span><strong id="goals">0</strong></div></div>
+<div class="panel-heading"><h2>Current-room goal map</h2><span id="map-label">Click a tile to set a position goal</span></div>
+<canvas id="map" width="720" height="280" aria-label="Read-only current room map; click to choose a goal"></canvas>
+<p class="caption">Circle: player. Diamond: goal. Openings: exits. Shaded cells: solid or occupied. Geometry guides goal selection; it does not certify safety.</p>
+</section>
+<aside>
+<section class="panel controls"><h2>Run controls</h2>
+<div class="two"><label>Seed<input id="seed" type="number" min="0" max="4294967295" value="1"></label><label>Scenario<select id="scenario"><option value="standard">Standard</option><option value="cave">Cave (experimental)</option><option value="forest">Forest (experimental)</option></select></label></div>
+<button id="initialize" class="secondary">Initialize a fresh world</button>
+<label>Goal source<select id="mode"><option value="auto">Automatic local goals</option><option value="position">Explicit position</option><option value="exit">Explicit exit transition</option></select></label>
+<div class="two"><label>Target X<input id="x" type="number" step="1" value="0"></label><label>Target Y<input id="y" type="number" step="1" value="0"></label></div>
+<div class="two"><label>Maximum live actions<input id="max-actions" type="number" min="1" max="1000" value="16"></label><label>Search depth<input id="depth" type="number" min="1" max="64" value="5"></label></div>
+<div class="two"><label>Simulations / query<input id="max-sims" type="number" min="1" max="4096" value="128"></label><label>Action interval (ms)<input id="pace" type="number" min="0" max="10000" value="120"></label></div>
+<div class="two"><button id="start" disabled>Run Horizon</button><button id="single" class="secondary" disabled>One verified action</button></div>
+<button id="stop" class="stop" disabled>Stop after the current action settles</button>
+<p class="caption">Session budgets: 32 queries, 4,096 simulations, 60 seconds before new dispatch stops. Search cutoff: 2 seconds per query; startup and action settlement can take longer. No automatic budget extension.</p>
+</section>
+<section class="panel" aria-live="polite"><p class="eyebrow">CONTROLLER STATE</p><h2 id="state">Idle</h2><p id="reason">Nothing runs until you initialize and press Run.</p><dl><dt>Explicit goal</dt><dd id="goal">—</dd><dt>Last search</dt><dd id="plan">—</dd><dt>Last action</dt><dd id="action">—</dd><dt>Outcome parity</dt><dd id="parity">—</dd></dl><p class="notice">Zero health loss is checked on evaluated actions and measured again live. A prefix makes no claim about safety after its horizon.</p></section>
+</aside>
+<section class="panel log"><div class="panel-heading"><h2>Bounded execution trace</h2><button id="export" class="secondary" disabled>Export diagnostics</button></div><pre id="events">No controller run yet.</pre></section>
+<section class="panel log"><div class="panel-heading"><h2>Candidate diagnosis ledger</h2><span>Bounded · no snapshots</span></div><pre id="candidates">No planner query yet.</pre></section>
+</main>
+<footer>Experimental execution adapter · Snapshot v3 unchanged · No learner/PPO writes · Ordinary evaluator remains separate</footer>
+<!-- Keep the independently served controller modules in lockstep with this page. -->
+<script src="./agent-simulation-host.js?v=20260923-exploration-memory-2"></script><script src="./agent-horizon-core.js?v=20260923-exploration-memory-2"></script><script src="./agent-horizon-host.js?v=20260923-exploration-memory-2"></script>
+<script src="./agent-horizon-goals.js?v=20260923-exploration-memory-2"></script><script src="./agent-horizon-controller.js?v=20260923-exploration-memory-2"></script><script src="./horizon-live-viewer.js?v=20260923-exploration-memory-2"></script>
+</body></html>

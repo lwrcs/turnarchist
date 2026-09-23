@@ -24623,6 +24623,10 @@ class Entity extends drawable_1.Drawable {
             this.updateCrushAnimation(delta);
             this.updateShadeColor(delta);
             //this.updateBloom(delta);
+            this.advanceMovementVisuals(delta);
+        };
+        /** Movement interpolation only: safe to advance without drawing or death effects. */
+        this.advanceMovementVisuals = (delta) => {
             if (!this.doneMoving()) {
                 const speed = this.isPushAnimating()
                     ? this.getPushEaseInDecayBase()
@@ -35206,6 +35210,52 @@ class Game {
     endPreLevelGenBlackout() {
         this.preLevelGenHoldBlack = false;
     }
+    /**
+     * Off-screen planning frames cannot rely on requestAnimationFrame to finish
+     * the presentation-only fade which starts level generation.  Run the same
+     * queued generation callback immediately; callers must restrict this to an
+     * isolated simulator.
+     */
+    async completePreLevelGenFadeForSimulation() {
+        if (!this.preLevelGenFadeActive || this.preLevelGenActionStarted || !this.preLevelGenAction)
+            return false;
+        this.preLevelGenFadeActive = false;
+        this.preLevelGenHoldBlack = true;
+        this.preLevelGenActionStarted = true;
+        const action = this.preLevelGenAction;
+        this.preLevelGenAction = null;
+        try {
+            await action();
+        }
+        finally {
+            this.preLevelGenFadeActive = false;
+            this.preLevelGenHoldBlack = false;
+            this.preLevelGenAction = null;
+            this.preLevelGenActionStarted = false;
+            this.preLevelGenFadeAlpha = 0;
+            this.preLevelGenFadeStartMs = 0;
+            this.preLevelGenFadeDurationMs = 0;
+        }
+        return true;
+    }
+    /**
+     * The ladder room handoff normally occurs in draw() once the outgoing
+     * dither reaches black. Hidden planning frames may not draw, so perform the
+     * same handoff at the same presentation threshold without advancing a turn.
+     */
+    completeLadderTransitionForSimulation() {
+        if (this.levelState !== LevelState.TRANSITIONING_LADDER || !this.transitioningLadder)
+            return false;
+        const deadFrames = 6;
+        const ditherFrame = Math.floor(((7 * 2 + deadFrames) * (Date.now() - this.transitionStartTime)) /
+            levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME_LADDER);
+        if (ditherFrame < 7 + deadFrames)
+            return false;
+        this.setActiveRoom(this.transitioningLadder.linkedRoom);
+        this.room.enterLevel(this.players[this.localPlayerID]);
+        this.transitioningLadder = null;
+        return true;
+    }
     /** Draw UI that should remain visible even during temporary blackout/fade (cursor, fps, version). */
     drawCursorFpsVersionOverlay(delta) {
         try {
@@ -36593,6 +36643,25 @@ const agentTraits_1 = __webpack_require__(/*! ./agentTraits */ "./src/game/agent
 const simulationSnapshot_1 = __webpack_require__(/*! ./save/simulationSnapshot */ "./src/game/save/simulationSnapshot.ts");
 const loadV2_1 = __webpack_require__(/*! ./save/loadV2 */ "./src/game/save/loadV2.ts");
 const validate_1 = __webpack_require__(/*! ./save/validate */ "./src/game/save/validate.ts");
+const fingerprint_1 = __webpack_require__(/*! ./save/fingerprint */ "./src/game/save/fingerprint.ts");
+const writeV2_1 = __webpack_require__(/*! ./save/writeV2 */ "./src/game/save/writeV2.ts");
+const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
+const agentPlanningWarnings_1 = __webpack_require__(/*! ./agentPlanningWarnings */ "./src/game/agentPlanningWarnings.ts");
+const agentPlanningInteraction_1 = __webpack_require__(/*! ./agentPlanningInteraction */ "./src/game/agentPlanningInteraction.ts");
+const agentPlanningPaths_1 = __webpack_require__(/*! ./agentPlanningPaths */ "./src/game/agentPlanningPaths.ts");
+const agentPlanningEmptyLoot_1 = __webpack_require__(/*! ./agentPlanningEmptyLoot */ "./src/game/agentPlanningEmptyLoot.ts");
+const agentPlanningAttachedLoot_1 = __webpack_require__(/*! ./agentPlanningAttachedLoot */ "./src/game/agentPlanningAttachedLoot.ts");
+const agentPlanningResources_1 = __webpack_require__(/*! ./agentPlanningResources */ "./src/game/agentPlanningResources.ts");
+const agentPlanningSpawners_1 = __webpack_require__(/*! ./agentPlanningSpawners */ "./src/game/agentPlanningSpawners.ts");
+const fishingSpot_1 = __webpack_require__(/*! ../entity/object/fishingSpot */ "./src/entity/object/fishingSpot.ts");
+const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
+const spawner_1 = __webpack_require__(/*! ../entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
+const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
+const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const itemsBuiltins_1 = __webpack_require__(/*! ./save/registry/itemsBuiltins */ "./src/game/save/registry/itemsBuiltins.ts");
+const items_1 = __webpack_require__(/*! ./save/registry/items */ "./src/game/save/registry/items.ts");
+const bombItem_1 = __webpack_require__(/*! ../item/bombItem */ "./src/item/bombItem.ts");
 const directions = {
     up: [game_1.Direction.UP, 0, -1], down: [game_1.Direction.DOWN, 0, 1],
     left: [game_1.Direction.LEFT, -1, 0], right: [game_1.Direction.RIGHT, 1, 0],
@@ -36648,12 +36717,204 @@ class AgentEnvironment {
         this.recentTransitions = [];
         /** Complete recorded history is retained only to recreate diagnostic sandboxes. */
         this.sandboxActionHistory = [];
+        /** Allocation state BEFORE diagnostic construction, not the branch's current counter. */
+        this.planningSandboxOrigin = null;
         this.contacts = new Map();
         this.contactKeys = new WeakMap();
         this.nextContactKey = 0;
         this.memory = new agentMemory_1.AgentMemory();
+        // HORIZON_LIVE_V1: opt-in measured ordinary execution; not a simulation restore.
+        this.horizonDispatch = null;
     }
     setFastMode(enabled) { (0, agentMode_1.setAgentFastMode)(enabled === true); }
+    /** Versioned privileged continuation; never exposed through perceive(). */
+    getPlanningCapabilities() { return { ...agentPlanning_1.PLANNING_CAPABILITIES }; }
+    capturePlanningSnapshot() {
+        if (this.busy || this.failure)
+            throw new Error("Planning requires an idle healthy agent");
+        const inner = this.captureSimulationSnapshot();
+        const serialized = (0, agentPlanning_1.serializePlanningEnvelope)({
+            format: agentPlanning_1.PLANNING_FORMAT,
+            inner,
+            runtime: {
+                seed: this.seed, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps,
+                vision: this.vision, recentTransitions: this.recentTransitions,
+                // Save V2 omits warning ownership/phase; carry it only in privileged v3 continuation.
+                warningContinuation: this.scenario === "standard"
+                    ? (0, agentPlanningWarnings_1.captureWarningContinuation)((0, writeV2_1.collectRoomsForSaveAtCurrentDepth)(this.game)) : null,
+                interactionContinuation: this.scenario === "standard"
+                    ? (0, agentPlanningInteraction_1.capturePlanningInteraction)(this.player(), tile => tile?.constructor === downLadder_1.DownLadder) : null,
+                pathContinuation: this.scenario === "standard"
+                    ? (0, agentPlanningPaths_1.capturePlanningPaths)((0, writeV2_1.collectRoomsForSaveAtCurrentDepth)(this.game), e => e instanceof enemy_1.Enemy && e.searchPathLocalizedCached === enemy_1.Enemy.prototype.searchPathLocalizedCached) : null,
+                emptyLootContinuation: this.scenario === "standard"
+                    ? (0, agentPlanningEmptyLoot_1.capturePlanningEmptyLoot)((0, writeV2_1.collectRoomsForSaveAtCurrentDepth)(this.game)) : null,
+                attachedLootContinuation: this.scenario === "standard"
+                    ? (0, agentPlanningAttachedLoot_1.capturePlanningAttachedLoot)((0, writeV2_1.collectRoomsForSaveAtCurrentDepth)(this.game), item => {
+                        (0, itemsBuiltins_1.registerBuiltinItemCodecsV2)();
+                        // BombItem is an ordinary drop but predates Save V2's item registry. Keep this
+                        // planning-only envelope local; do not broaden the production save contract.
+                        if (item instanceof bombItem_1.BombItem)
+                            return { kind: "planning_bomb_item", gid: item.globalId,
+                                x: item.x, y: item.y, z: item.z, stackCount: item.stackCount, pickedUp: item.pickedUp,
+                                groundedNoAnimate: item.groundedNoAnimate === true };
+                        const kind = (0, itemsBuiltins_1.getItemKindV2)(item), codec = kind && items_1.itemRegistryV2.get(kind);
+                        if (!kind || !codec)
+                            throw new agentPlanning_1.PlanningDataError("PLANNING_ATTACHED_LOOT_UNSUPPORTED", "/runtime/attachedLootContinuation", `No item codec for ${item?.constructor?.name ?? "unknown"}`);
+                        return codec.save(item, { game: this.game, nowMs: 0 });
+                    }) : null,
+                resourceContinuation: this.scenario === "standard"
+                    ? (0, agentPlanningResources_1.capturePlanningResources)((0, writeV2_1.collectRoomsForSaveAtCurrentDepth)(this.game), e => e instanceof fishingSpot_1.FishingSpot) : null,
+                // Save V2 restores existing gids but intentionally does not own the process allocator.
+                // The isolated branch needs the live frontier so newly spawned entities keep exact identity.
+                allocatorContinuation: this.scenario === "standard" ? IdGenerator_1.IdGenerator.captureSimulationState() : null,
+                // Perception IDs are agent-private but participate in exact observation parity.
+                // Preserve their live frontier so first sight of a new room does not restart at c1.
+                contactContinuation: {
+                    entries: [...this.contacts].map(([key, contact]) => [key, {
+                            ...contact, previous: contact.previous ? { ...contact.previous } : undefined,
+                        }]),
+                    nextContactKey: this.nextContactKey,
+                },
+                spawnerContinuation: this.scenario === "standard"
+                    ? (0, agentPlanningSpawners_1.capturePlanningSpawners)((0, writeV2_1.collectRoomsForSaveAtCurrentDepth)(this.game), e => e instanceof spawner_1.Spawner) : null,
+            },
+            context: this.planningContext(),
+            fingerprint: (0, fingerprint_1.captureFingerprint)(this.game),
+            reconstruction: this.planningReconstruction(),
+        });
+        return { schemaVersion: 3, source: "privileged-horizon-snapshot", serialized };
+    }
+    planningReconstruction() {
+        if (this.scenario === "standard")
+            return null;
+        if (!this.planningSandboxOrigin)
+            throw new agentPlanning_1.PlanningDataError("PLANNING_ID_ORIGIN_MISSING", "/reconstruction/origin", "Diagnostic run predates identity capture; reset this diagnostic run and recapture");
+        return { format: agentPlanning_1.PLANNING_RECONSTRUCTION_FORMAT, origin: this.planningSandboxOrigin,
+            frontier: IdGenerator_1.IdGenerator.captureSimulationState() };
+    }
+    planningContext() {
+        return { contract: this.contract(), settings: { ...gameplaySettings_1.GameplaySettings }, developerMode: gameConstants_1.GameConstants.DEVELOPER_MODE };
+    }
+    /** Opaque JSON-safe guard, encoded before JSON can discard optional values. */
+    getPlanningGuard() {
+        if (this.busy || this.failure)
+            throw new Error("Planning requires an idle healthy agent");
+        return this.planningGuardValue();
+    }
+    /** Same lossless guard, usable at the owned live dispatch boundary. */
+    planningGuardValue() {
+        return (0, agentPlanning_1.planningEncode)({ context: this.planningContext(), fingerprint: (0, fingerprint_1.captureFingerprint)(this.game),
+            seed: this.seed, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps,
+            reconstruction: this.planningReconstruction() });
+    }
+    async restorePlanningSnapshot(serialized) {
+        if (!agentMode_1.AGENT_SIMULATION_MODE)
+            throw new Error("Planning restore requires an isolated simulator");
+        if (this.busy || this.failure)
+            throw new Error("Planning requires an idle healthy agent");
+        const envelope = (0, agentPlanning_1.parsePlanningEnvelope)(serialized);
+        const vision = (0, agentPerception_1.validateAgentVision)(envelope.runtime.vision);
+        (0, agentPlanning_1.assertPlanningEqual)(envelope.context, this.planningContext(), "PLANNING_CONTEXT_MISMATCH", "/context");
+        this.scenario = "standard";
+        await this.restoreSimulationSnapshot(envelope.inner.serialized, envelope.reconstruction?.origin);
+        (0, agentPlanning_1.assertPlanningEqual)({ seed: envelope.runtime.seed, scenario: envelope.runtime.scenario }, { seed: this.seed, scenario: this.scenario }, "PLANNING_RUNTIME_MISMATCH", "/runtime");
+        this.steps = envelope.runtime.steps;
+        this.maxSteps = envelope.runtime.maxSteps;
+        this.vision = vision;
+        // Decoding already owns these values; do not run them through lossy JSON again.
+        this.recentTransitions = envelope.runtime.recentTransitions;
+        if (envelope.runtime.contactContinuation != null) {
+            const continuation = envelope.runtime.contactContinuation;
+            this.contacts.clear();
+            for (const [key, contact] of continuation.entries)
+                this.contacts.set(key, {
+                    ...contact, previous: contact.previous ? { ...contact.previous } : undefined,
+                });
+            this.nextContactKey = continuation.nextContactKey;
+        }
+        if (envelope.runtime.spawnerContinuation != null) {
+            if (this.scenario !== "standard")
+                throw new agentPlanning_1.PlanningDataError("PLANNING_SPAWNER_CONTINUATION_UNSUPPORTED", "/runtime/spawnerContinuation", "Diagnostic replay must recreate its own spawners");
+            (0, agentPlanningSpawners_1.restorePlanningSpawners)(envelope.runtime.spawnerContinuation, (0, writeV2_1.collectRoomsForSaveAtCurrentDepth)(this.game), e => e instanceof spawner_1.Spawner);
+        }
+        if (envelope.runtime.warningContinuation != null) {
+            if (this.scenario !== "standard")
+                throw new agentPlanning_1.PlanningDataError("PLANNING_WARNING_CONTINUATION_UNSUPPORTED", "/runtime/warningContinuation", "Diagnostic replay must recreate its own warning graph");
+            (0, agentPlanningWarnings_1.restoreWarningContinuation)(envelope.runtime.warningContinuation, (0, writeV2_1.collectRoomsForSaveAtCurrentDepth)(this.game), (state, parent) => new hitWarning_1.HitWarning(this.game, state.x, state.y, state.eX, state.eY, state.isEnemy, state.dirOnly, parent));
+        }
+        if (envelope.runtime.interactionContinuation != null) {
+            if (this.scenario !== "standard")
+                throw new agentPlanning_1.PlanningDataError("PLANNING_INTERACTION_UNSUPPORTED", "/runtime/interactionContinuation", "Diagnostic replay must recreate its own interaction");
+            (0, agentPlanningInteraction_1.restorePlanningInteraction)(envelope.runtime.interactionContinuation, this.player(), Object.values(this.game.players), tile => tile?.constructor === downLadder_1.DownLadder);
+        }
+        if (envelope.runtime.pathContinuation != null) {
+            if (this.scenario !== "standard")
+                throw new agentPlanning_1.PlanningDataError("PLANNING_PATH_CONTINUATION_UNSUPPORTED", "/runtime/pathContinuation", "Diagnostic replay must recreate its own cached paths");
+            (0, agentPlanningPaths_1.restorePlanningPaths)(envelope.runtime.pathContinuation, (0, writeV2_1.collectRoomsForSaveAtCurrentDepth)(this.game), e => e instanceof enemy_1.Enemy && e.searchPathLocalizedCached === enemy_1.Enemy.prototype.searchPathLocalizedCached);
+        }
+        if (envelope.runtime.emptyLootContinuation != null) {
+            if (this.scenario !== "standard")
+                throw new agentPlanning_1.PlanningDataError("PLANNING_EMPTY_LOOT_UNSUPPORTED", "/runtime/emptyLootContinuation", "Diagnostic replay must recreate its own loot");
+            (0, agentPlanningEmptyLoot_1.restorePlanningEmptyLoot)(envelope.runtime.emptyLootContinuation, (0, writeV2_1.collectRoomsForSaveAtCurrentDepth)(this.game));
+        }
+        if (envelope.runtime.attachedLootContinuation != null) {
+            if (this.scenario !== "standard")
+                throw new agentPlanning_1.PlanningDataError("PLANNING_ATTACHED_LOOT_UNSUPPORTED", "/runtime/attachedLootContinuation", "Diagnostic replay must recreate its own loot");
+            const rngState = random_1.Random.state;
+            try {
+                (0, agentPlanningAttachedLoot_1.restorePlanningAttachedLoot)(envelope.runtime.attachedLootContinuation, (0, writeV2_1.collectRoomsForSaveAtCurrentDepth)(this.game), (saved, room) => {
+                    (0, itemsBuiltins_1.registerBuiltinItemCodecsV2)();
+                    if (saved.kind === "planning_bomb_item") {
+                        const item = new bombItem_1.BombItem(room, saved.x, saved.y);
+                        item.globalId = saved.gid;
+                        item.z = saved.z;
+                        item.stackCount = saved.stackCount;
+                        item.pickedUp = saved.pickedUp;
+                        item.groundedNoAnimate = saved.groundedNoAnimate;
+                        return item;
+                    }
+                    const codec = items_1.itemRegistryV2.get(saved.kind);
+                    if (!codec)
+                        throw new agentPlanning_1.PlanningDataError("PLANNING_ATTACHED_LOOT_UNSUPPORTED", "/runtime/attachedLootContinuation", `No item codec for ${saved.kind}`);
+                    const item = codec.spawn(saved, room, { game: this.game });
+                    item.level = room;
+                    return item;
+                });
+            }
+            finally {
+                random_1.Random.setState(rngState);
+            }
+        }
+        if (envelope.runtime.resourceContinuation != null) {
+            if (this.scenario !== "standard")
+                throw new agentPlanning_1.PlanningDataError("PLANNING_RESOURCE_CONTINUATION_UNSUPPORTED", "/runtime/resourceContinuation", "Diagnostic replay must recreate its own resource state");
+            (0, agentPlanningResources_1.restorePlanningResources)(envelope.runtime.resourceContinuation, (0, writeV2_1.collectRoomsForSaveAtCurrentDepth)(this.game), e => e instanceof fishingSpot_1.FishingSpot);
+        }
+        // Continuation reconstruction may allocate temporary replacement objects. Restore the
+        // captured live frontier only after all such objects have received their saved identities.
+        if (envelope.runtime.allocatorContinuation != null) {
+            if (this.scenario !== "standard")
+                throw new agentPlanning_1.PlanningDataError("PLANNING_ID_CONTINUATION_UNSUPPORTED", "/runtime/allocatorContinuation", "Diagnostic reconstruction owns its allocator checkpoints");
+            IdGenerator_1.IdGenerator.restoreSimulationState(envelope.runtime.allocatorContinuation);
+        }
+        (0, agentPlanning_1.assertPlanningEqual)(envelope.fingerprint, (0, fingerprint_1.captureFingerprint)(this.game), "PLANNING_FINGERPRINT_MISMATCH", "/fingerprint");
+        if (envelope.reconstruction) {
+            // Verify the independently replayed allocator. Never force frontier state to fit a test.
+            (0, agentPlanning_1.assertPlanningEqual)(envelope.reconstruction.frontier, IdGenerator_1.IdGenerator.captureSimulationState(), "PLANNING_ALLOCATOR_MISMATCH", "/reconstruction/frontier");
+        }
+        return this.observe();
+    }
+    async stepForPlanning(input) {
+        if (!agentMode_1.AGENT_SIMULATION_MODE)
+            throw new Error("Planning steps require an isolated simulator");
+        if (this.busy || this.failure)
+            throw new Error("Planning requires an idle healthy agent");
+        const player = this.player();
+        const measured = await (0, agentPlanning_1.withGrossHealthLoss)(player, () => this.step(input));
+        if (this.player() !== player)
+            throw new Error("Planning action replaced the player; metric coverage is unknown");
+        return { ...measured.result, planning: { schemaVersion: 1, metric: agentPlanning_1.HEALTH_METRIC, healthLoss: measured.healthLoss } };
+    }
     getUiLayout() {
         const player = this.player();
         return { ...player.inventory.getAgentUiLayout(),
@@ -36696,6 +36957,104 @@ class AgentEnvironment {
         open ? inventory.open() : inventory.close();
     }
     player() { return this.game.players[this.game.localPlayerID]; }
+    /** Lightweight read-only geometry for goal selection. It makes NO safety predictions. */
+    inspectHorizonRoom() {
+        if (this.busy || this.failure)
+            throw new Error("Goal inspection requires an idle healthy agent");
+        const room = this.player().getRoom(), view = this.observe();
+        return { schemaVersion: 1, privileged: true, roomId: room.globalId,
+            tiles: view.room.tiles.map(t => {
+                const tile = room.roomArray[t.x]?.[t.y];
+                return { ...t, z: tile?.z ?? 0, solid: tile?.isSolid?.() ?? true,
+                    exit: tile instanceof downLadder_1.DownLadder || tile instanceof upLadder_1.UpLadder, isDoor: tile?.isDoor === true,
+                    traversal: tile?.getTraversalTraits?.() ?? null };
+            }),
+            occupied: room.entities.filter(e => !e.dead && e.collidable).map(e => ({ x: e.x, y: e.y, z: e.z ?? 0, width: e.w || 1, height: e.h || 1 })) };
+    }
+    getHorizonExecutionCapabilities() {
+        return { version: 1, mode: "ordinary-agent-step", metric: agentPlanning_1.HEALTH_METRIC,
+            precondition: "dispatch-guard-v1", cancellation: "before-dispatch-or-after-settlement" };
+    }
+    /**
+     * Execute ONE authorized action through ordinary step(), never through the simulator.
+     * Cancellation cannot undo an admitted game action; its settlement/metric is still awaited.
+     * This method validates state, not the caller's proof of safety; the Horizon host supplies it.
+     */
+    async stepForHorizon(input, authorization) {
+        const enteredAt = performance.now();
+        if (agentMode_1.AGENT_SIMULATION_MODE)
+            throw new Error("Live Horizon execution requires a non-simulator agent");
+        if (this.busy || this.failure || this.horizonDispatch)
+            throw new Error("Live execution requires an idle healthy agent");
+        if (!authorization || typeof authorization.guard !== "string" || typeof authorization.view !== "string" ||
+            !authorization.guard.length || !authorization.view.length ||
+            authorization.guard.length + authorization.view.length > 24000000) {
+            throw new Error("Invalid Horizon execution authorization");
+        }
+        const guard = JSON.parse(authorization.guard);
+        const view = JSON.parse(authorization.view);
+        if (!view || typeof view !== "object" || Array.isArray(view))
+            throw new Error("Invalid Horizon view precondition");
+        const signal = authorization.signal;
+        if (signal && typeof signal.aborted !== "boolean")
+            throw new Error("Invalid Horizon cancellation signal");
+        const delay = authorization.maxDispatchDelayMs ?? this.timeoutMs;
+        if (!Number.isFinite(delay) || delay < 0 || delay > 600000)
+            throw new Error("Invalid Horizon dispatch deadline");
+        const request = { ...input };
+        const player = this.player();
+        const permit = { action: request, guard, view, signal, dispatched: false, player, deadline: enteredAt + delay };
+        this.horizonDispatch = permit;
+        try {
+            const measured = await (0, agentPlanning_1.withGrossHealthLoss)(player, () => this.step(request));
+            if (this.player() !== player)
+                throw new Error("Live action replaced the player; health metric coverage is unknown");
+            return { ...measured.result, horizon: { schemaVersion: 1, metric: agentPlanning_1.HEALTH_METRIC,
+                    healthLoss: measured.healthLoss, dispatched: permit.dispatched } };
+        }
+        catch (error) {
+            // A stale/cancelled precondition is a rejection, not a poisoned game episode.
+            const cause = error?.horizonCause;
+            if (cause)
+                throw cause;
+            throw error;
+        }
+        finally {
+            if (this.horizonDispatch === permit)
+                this.horizonDispatch = null;
+        }
+    }
+    /** Called immediately before the ordinary processor, after settle and validation. */
+    assertHorizonDispatch(input) {
+        const permit = this.horizonDispatch;
+        if (!permit)
+            return; // Ordinary evaluators retain their exact dispatch behavior.
+        try {
+            if (permit.signal?.aborted)
+                throw new agentPlanning_1.PlanningDataError("HORIZON_CANCELLED", "/execution", "Cancelled before dispatch");
+            if (this.player() !== permit.player)
+                throw new agentPlanning_1.PlanningDataError("HORIZON_STALE_STATE", "/player", "Player object changed before dispatch");
+            (0, agentPlanning_1.assertPlanningEqual)(permit.action, input, "HORIZON_ACTION_MISMATCH", "/action");
+            (0, agentPlanning_1.assertPlanningEqual)(permit.guard, this.planningGuardValue(), "HORIZON_STALE_STATE", "/guard");
+            // Keep in exact parity with AgentHorizonHost.viewIdentity(). No physical field is removed.
+            const observation = this.observe();
+            const view = {};
+            for (const key of ["seed", "scenario", "steps", "maxSteps", "contract", "player", "room", "inventory",
+                "decision", "selectionChoices", "vendingMachine", "terminated", "truncated", "failure"]) {
+                if (observation[key] !== undefined)
+                    view[key] = observation[key];
+            }
+            (0, agentPlanning_1.assertPlanningEqual)(permit.view, view, "HORIZON_STALE_STATE", "/observation");
+            if (permit.signal?.aborted || performance.now() >= permit.deadline) {
+                throw new agentPlanning_1.PlanningDataError("HORIZON_CANCELLED", "/execution", "Cancelled or expired before dispatch");
+            }
+            permit.dispatched = true;
+        }
+        catch (error) {
+            // exclusive() already knows this class is a non-poisoning, unrecorded rejection.
+            throw Object.assign(new AgentActionError(String(error?.message || error)), { horizonCause: error });
+        }
+    }
     contract() { return (0, agentContract_1.getAgentContract)(); }
     checkCompatibility(trainedOn) {
         return (0, agentContract_1.checkAgentCompatibility)(trainedOn);
@@ -36740,7 +37099,7 @@ class AgentEnvironment {
      * Available only inside an agent iframe opened with `simulator=1`. The
      * visible game never restores hypothetical branches into itself.
      */
-    async restoreSimulationSnapshot(serialized) {
+    async restoreSimulationSnapshot(serialized, planningOrigin) {
         if (!agentMode_1.AGENT_SIMULATION_MODE)
             throw new Error("Simulation snapshots can only be restored in an isolated simulator");
         if (typeof serialized !== "string" || serialized.length === 0 || serialized.length > 20000000) {
@@ -36756,12 +37115,19 @@ class AgentEnvironment {
                 if (!Number.isInteger(envelope.seed) || !Array.isArray(envelope.actions) || typeof envelope.scenario !== "string") {
                     throw new Error("Invalid diagnostic sandbox snapshot");
                 }
-                await this.restoreDiagnosticSandbox(envelope.seed, envelope.scenario, envelope.actions, Number.isInteger(envelope.maxSteps) ? envelope.maxSteps : this.maxSteps);
+                await this.restoreDiagnosticSandbox(envelope.seed, envelope.scenario, envelope.actions, Number.isInteger(envelope.maxSteps) ? envelope.maxSteps : this.maxSteps, planningOrigin);
                 return this.observe();
             }
+            if (planningOrigin)
+                throw new agentPlanning_1.PlanningDataError("PLANNING_RECONSTRUCTION_INVALID", "/reconstruction", "Allocator origin is valid only for diagnostic reconstruction");
+            this.planningSandboxOrigin = null;
             const parsed = (0, validate_1.parseSaveV2Json)(serialized);
             if (parsed.ok === false)
                 throw new Error(`Simulation snapshot validation failed: ${String(parsed.error)}`);
+            // As with diagnostic reconstruction, finish bootstrap/previous transitions
+            // before Save V2 clears the world. Old generation callbacks must not replace
+            // the player or room while a new branch is loading or stepping.
+            await this.settle();
             const loaded = await (0, loadV2_1.loadSaveV2)(this.game, parsed.value);
             if (loaded.ok === false)
                 throw new Error(`Simulation snapshot load failed: ${String(loaded.error)}`);
@@ -36778,13 +37144,28 @@ class AgentEnvironment {
             return this.observe();
         });
     }
-    async restoreDiagnosticSandbox(seed, scenario, actions, maxSteps) {
+    async restoreDiagnosticSandbox(seed, scenario, actions, maxSteps, planningOrigin) {
         if (scenario === "standard" || (!(0, combatTestbed_1.isCombatScenario)(scenario) && !["forest", "cave"].includes(scenario))) {
             throw new Error("Invalid diagnostic sandbox scenario");
         }
+        // HORIZON_V14_BOOTSTRAP_BARRIER: window.agent is published before the
+        // iframe's initial newGame() finishes asynchronous world construction.
+        // Match reset(): finish that world before starting another generation.
+        // Otherwise its late callbacks can allocate IDs inside the reconstructed
+        // sandbox, even though we restored the correct allocator origin below.
+        await this.settle();
         this.game.replayManager.cancelReplay();
         this.game.newGame(seed);
         await this.settle();
+        // The staging world is replaced synchronously by start*Sandbox below. Restore here,
+        // after newGame has settled and BEFORE any diagnostic Level/Room/Tile is allocated.
+        // IDs, lookup maps, ladder links, and generated descendants then agree by construction.
+        if (planningOrigin) {
+            if (!agentMode_1.AGENT_SIMULATION_MODE)
+                throw new Error("Allocator replay requires an isolated simulator");
+            IdGenerator_1.IdGenerator.restoreSimulationState(planningOrigin);
+        }
+        this.planningSandboxOrigin = IdGenerator_1.IdGenerator.captureSimulationState();
         if ((0, combatTestbed_1.isCombatScenario)(scenario))
             this.game.startCombatSandbox(scenario, seed);
         else
@@ -36863,7 +37244,25 @@ class AgentEnvironment {
             // simulator explicitly pumps it until the player owns the next turn.
             // This is isolated from the visible game and stops as soon as ready().
             if (agentMode_1.AGENT_SIMULATION_MODE) {
+                // Down-ladder generation normally begins only after a rendered fade.
+                // Hidden planning frames may receive no RAF at all, so advance only
+                // that presentation boundary and await its original callback.
+                await this.game.completePreLevelGenFadeForSimulation?.();
+                // The destination-room handoff is likewise owned by the rendered
+                // ladder transition. Preserve its normal dither threshold when an
+                // off-screen planning frame has no draw cadence.
+                this.game.completeLadderTransitionForSimulation?.();
                 this.game.update();
+                // A completed push can still hold the input gate until its visual
+                // interpolation advances. Offscreen RAF is not guaranteed. Pump only
+                // that interpolation (not drawing/death effects or another game turn),
+                // and retain the ordinary progress threshold used by the renderer.
+                this.game.players[this.game.localPlayerID]?.advancePushMoveInputVisuals(1);
+                // Last-enemy kills can start an exit-unlock camera pan. It is a
+                // skippable presentation, not a world action; without draw/RAF it
+                // otherwise holds ready() forever after the attack already completed.
+                if (this.game.cameraAnimation?.active)
+                    this.game.skipCameraAnimation();
                 if (this.ready())
                     break;
             }
@@ -36906,6 +37305,7 @@ class AgentEnvironment {
             this.game.replayManager.cancelReplay();
             this.game.newGame(seed);
             await this.settle();
+            this.planningSandboxOrigin = scenario === "standard" ? null : IdGenerator_1.IdGenerator.captureSimulationState();
             if ((0, combatTestbed_1.isCombatScenario)(scenario))
                 this.game.startCombatSandbox(scenario, seed);
             else if (scenario !== "standard")
@@ -37420,6 +37820,7 @@ class AgentEnvironment {
                 action = actionInput;
             const prediction = this.describeAction(actionInput);
             const count = this.game.replayManager.getStats().count;
+            this.assertHorizonDispatch(actionInput);
             if (actionInput.type === "SelectOption") {
                 if (!player.menu.selectChoice(actionInput.index))
                     throw new AgentActionError("Selection is disabled or unavailable");
@@ -37657,6 +38058,1114 @@ function perceiveRoom(input, vision) {
     };
 }
 exports.perceiveRoom = perceiveRoom;
+
+
+/***/ }),
+
+/***/ "./src/game/agentPlanning.ts":
+/*!***********************************!*\
+  !*** ./src/game/agentPlanning.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.withGrossHealthLoss = exports.parsePlanningEnvelope = exports.serializePlanningEnvelope = exports.assertPlanningEqual = exports.planningJson = exports.planningDecode = exports.planningEncode = exports.PlanningDataError = exports.PLANNING_RECONSTRUCTION_FORMAT = exports.PLANNING_CAPABILITIES = exports.HEALTH_METRIC = exports.PLANNING_CODEC = exports.PLANNING_FORMAT = void 0;
+const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
+/** Privileged planning DTO support. Never changes gameplay or the Save V2 codec. */
+exports.PLANNING_FORMAT = "turnarchist-planning-snapshot-v3";
+exports.PLANNING_CODEC = "tagged-planning-data-v1";
+exports.HEALTH_METRIC = "gross-health-decrease-v1";
+exports.PLANNING_CAPABILITIES = Object.freeze({
+    snapshotSchemaVersion: 3, format: exports.PLANNING_FORMAT, codec: exports.PLANNING_CODEC, healthMetric: exports.HEALTH_METRIC,
+    reconstruction: "diagnostic-allocator-replay-v1",
+    warningContinuation: "horizon-warning-graph-v1",
+});
+const MAX_TEXT = 24000000, MAX_INNER = 20000000, MAX_DEPTH = 128, MAX_NODES = 250000;
+exports.PLANNING_RECONSTRUCTION_FORMAT = "diagnostic-allocator-replay-v1";
+class PlanningDataError extends Error {
+    constructor(code, path, message, details = {}) {
+        super(`${code} at ${path || "/"}: ${message}`);
+        this.code = code;
+        this.path = path;
+        this.details = details;
+        this.name = "PlanningDataError";
+    }
+}
+exports.PlanningDataError = PlanningDataError;
+const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+const pointer = (base, key) => base + "/" + String(key).replace(/~/g, "~0").replace(/\//g, "~1");
+function fail(path, message) { throw new PlanningDataError("PLANNING_DATA_UNSUPPORTED", path, message); }
+function plain(value) {
+    const proto = Object.getPrototypeOf(value);
+    // Accept plain records from other same-origin realms, without invoking getters.
+    return proto === null || (Object.getPrototypeOf(proto) === null &&
+        Object.getOwnPropertyDescriptor(proto, "constructor")?.value?.name === "Object");
+}
+/**
+ * Value-preserving diagnostic encoding, NOT JSON.stringify normalization.
+ * Every container is tagged, so a user value shaped like a tag cannot collide.
+ * Distinguishes missing keys, undefined, holes, null, +/-Infinity, NaN and -0.
+ * Shared references are duplicated by value; object identity is not the DTO contract.
+ * Rejects cycles, functions, symbols, accessors and non-plain objects without calling toJSON.
+ */
+function planningEncode(value, rootPath = "") {
+    const active = new Set();
+    let nodes = 0;
+    function visit(item, path, depth) {
+        if (++nodes > MAX_NODES || depth > MAX_DEPTH)
+            fail(path, "Diagnostic data exceeds structural limits");
+        if (item === null || typeof item === "string" || typeof item === "boolean")
+            return item;
+        if (item === undefined)
+            return ["undefined"];
+        if (typeof item === "number") {
+            if (Number.isNaN(item))
+                return ["number", "NaN"];
+            if (item === Infinity)
+                return ["number", "+Infinity"];
+            if (item === -Infinity)
+                return ["number", "-Infinity"];
+            if (Object.is(item, -0))
+                return ["number", "-0"];
+            return item;
+        }
+        if (typeof item !== "object")
+            fail(path, `Unsupported ${typeof item}`);
+        const object = item;
+        if (active.has(object))
+            fail(path, "Cyclic diagnostic data");
+        if (Object.getOwnPropertySymbols(object).length)
+            fail(path, "Symbol-keyed diagnostic data");
+        if (!Array.isArray(object) && !plain(object))
+            fail(path, "Expected a plain data record");
+        active.add(object);
+        try {
+            if (Array.isArray(object)) {
+                if (object.length > MAX_NODES)
+                    fail(path, "Array exceeds structural limits");
+                for (const key of Object.keys(object)) {
+                    if (!/^(0|[1-9][0-9]*)$/.test(key) || Number(key) >= object.length)
+                        fail(pointer(path, key), "Named array properties are unsupported");
+                }
+                const values = [];
+                for (let i = 0; i < object.length; i++) {
+                    if (!own(object, i)) {
+                        values.push(["hole"]);
+                        if (++nodes > MAX_NODES)
+                            fail(path, "Too many array holes");
+                        continue;
+                    }
+                    const descriptor = Object.getOwnPropertyDescriptor(object, String(i));
+                    if (!("value" in descriptor))
+                        fail(pointer(path, i), "Array accessor is unsupported");
+                    values.push(visit(descriptor.value, pointer(path, i), depth + 1));
+                }
+                return ["array", values];
+            }
+            const entries = [];
+            for (const key of Object.keys(object).sort()) {
+                const descriptor = Object.getOwnPropertyDescriptor(object, key);
+                if (!("value" in descriptor))
+                    fail(pointer(path, key), "Record accessor is unsupported");
+                entries.push([key, visit(descriptor.value, pointer(path, key), depth + 1)]);
+            }
+            return ["object", entries];
+        }
+        finally {
+            active.delete(object);
+        }
+    }
+    return visit(value, rootPath, 0);
+}
+exports.planningEncode = planningEncode;
+function planningDecode(encoded) {
+    let nodes = 0;
+    function visit(item, path, depth) {
+        if (++nodes > MAX_NODES || depth > MAX_DEPTH)
+            fail(path, "Encoded data exceeds structural limits");
+        if (item === null || typeof item === "string" || typeof item === "boolean")
+            return item;
+        if (typeof item === "number" && Number.isFinite(item) && !Object.is(item, -0))
+            return item;
+        if (!Array.isArray(item))
+            fail(path, "Invalid encoded value");
+        if (item.length === 1 && item[0] === "undefined")
+            return undefined;
+        if (item.length === 2 && item[0] === "number") {
+            switch (item[1]) {
+                case "NaN": return NaN;
+                case "+Infinity": return Infinity;
+                case "-Infinity": return -Infinity;
+                case "-0": return -0;
+            }
+            fail(path, "Invalid numeric tag");
+        }
+        if (item.length !== 2 || !Array.isArray(item[1]))
+            fail(path, "Invalid container tag");
+        const payload = item[1];
+        if (payload.length > MAX_NODES)
+            fail(path, "Container exceeds structural limits");
+        if (item[0] === "array") {
+            const result = new Array(payload.length);
+            for (let i = 0; i < payload.length; i++) {
+                if (Array.isArray(payload[i]) && payload[i].length === 1 && payload[i][0] === "hole") {
+                    if (++nodes > MAX_NODES)
+                        fail(path, "Too many array holes");
+                }
+                else
+                    result[i] = visit(payload[i], pointer(path, i), depth + 1);
+            }
+            return result;
+        }
+        if (item[0] === "object") {
+            const result = {};
+            let previous = null;
+            for (const entry of payload) {
+                if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "string" ||
+                    (previous !== null && previous >= entry[0]))
+                    fail(path, "Object keys must be unique and sorted");
+                previous = entry[0];
+                // defineProperty avoids the __proto__ setter, preserving it as ordinary data.
+                Object.defineProperty(result, entry[0], { enumerable: true, configurable: true, writable: true,
+                    value: visit(entry[1], pointer(path, entry[0]), depth + 1) });
+            }
+            return result;
+        }
+        fail(path, "Unknown container tag");
+    }
+    return visit(encoded, "", 0);
+}
+exports.planningDecode = planningDecode;
+function planningJson(value) { return JSON.stringify(planningEncode(value)); }
+exports.planningJson = planningJson;
+function describe(value) {
+    if (value === undefined)
+        return "undefined";
+    if (typeof value === "number")
+        return Object.is(value, -0) ? "-0" : String(value);
+    const text = planningJson(value);
+    return text.length <= 180 ? text : text.slice(0, 177) + "...";
+}
+/** A bounded, field-addressable mismatch, not a dump of the whole privileged snapshot. */
+function assertPlanningEqual(expected, actual, code, rootPath) {
+    if (planningJson(expected) === planningJson(actual))
+        return;
+    function mismatch(path, a, b, message = "Values differ") {
+        throw new PlanningDataError(code, path, message, { expected: describe(a), actual: describe(b) });
+    }
+    function compare(a, b, path) {
+        if (Object.is(a, b))
+            return;
+        if (!a || !b || typeof a !== "object" || typeof b !== "object" || Array.isArray(a) !== Array.isArray(b))
+            mismatch(path, a, b);
+        const left = a, right = b;
+        if (Array.isArray(a) && Array.isArray(b) && a.length !== b.length)
+            mismatch(pointer(path, "length"), a.length, b.length);
+        for (const key of Array.from(new Set([...Object.keys(left), ...Object.keys(right)])).sort()) {
+            if (own(left, key) !== own(right, key))
+                mismatch(pointer(path, key), left[key], right[key], own(left, key) ? "Key missing after restore" : "Unexpected key after restore");
+            compare(left[key], right[key], pointer(path, key));
+        }
+    }
+    compare(expected, actual, rootPath);
+    mismatch(rootPath, expected, actual);
+}
+exports.assertPlanningEqual = assertPlanningEqual;
+function validateEnvelope(value) {
+    const envelope = value, runtime = envelope?.runtime, inner = envelope?.inner;
+    if (envelope?.format !== exports.PLANNING_FORMAT || !runtime || !inner || inner.schemaVersion !== 1 ||
+        inner.source !== "privileged-agent-snapshot" || typeof inner.serialized !== "string" ||
+        !inner.serialized.length || inner.serialized.length > MAX_INNER ||
+        !Number.isInteger(runtime.seed) || runtime.seed < 0 || runtime.seed > 0xffffffff ||
+        typeof runtime.scenario !== "string" || !runtime.scenario ||
+        !Number.isSafeInteger(runtime.steps) || runtime.steps < 0 ||
+        !Number.isSafeInteger(runtime.maxSteps) || runtime.maxSteps < 1 || runtime.maxSteps > 100000 || runtime.steps > runtime.maxSteps ||
+        !Number.isSafeInteger(inner.createdAtStep) || inner.createdAtStep !== runtime.steps ||
+        !Array.isArray(runtime.recentTransitions) || runtime.recentTransitions.length > 8 ||
+        !runtime.vision || typeof runtime.vision !== "object" || Array.isArray(runtime.vision) ||
+        !envelope.context || typeof envelope.context !== "object" || Array.isArray(envelope.context) ||
+        !envelope.fingerprint || typeof envelope.fingerprint !== "object" || Array.isArray(envelope.fingerprint)) {
+        throw new PlanningDataError("PLANNING_ENVELOPE_INVALID", "/", "Invalid continuation metadata");
+    }
+    if (runtime.scenario === "standard") {
+        if (envelope.reconstruction !== null)
+            throw new PlanningDataError("PLANNING_RECONSTRUCTION_INVALID", "/reconstruction", "Standard Save V2 must not restore a diagnostic allocator origin");
+        if (runtime.allocatorContinuation !== undefined)
+            (0, IdGenerator_1.readIdGeneratorSnapshot)(runtime.allocatorContinuation, "/runtime/allocatorContinuation");
+    }
+    else {
+        const reconstruction = envelope.reconstruction;
+        if (!reconstruction || reconstruction.format !== exports.PLANNING_RECONSTRUCTION_FORMAT ||
+            Object.keys(reconstruction).sort().join(",") !== "format,frontier,origin") {
+            throw new PlanningDataError("PLANNING_RECONSTRUCTION_INVALID", "/reconstruction", "Diagnostic snapshots require origin and frontier allocator checkpoints; reset and recapture");
+        }
+        (0, IdGenerator_1.readIdGeneratorSnapshot)(reconstruction.origin, "/reconstruction/origin");
+        (0, IdGenerator_1.readIdGeneratorSnapshot)(reconstruction.frontier, "/reconstruction/frontier");
+        let replay;
+        try {
+            replay = JSON.parse(inner.serialized);
+        }
+        catch { }
+        if (replay?.format !== "diagnostic-sandbox-replay-v1" || replay.seed !== runtime.seed ||
+            replay.scenario !== runtime.scenario || replay.maxSteps !== runtime.maxSteps ||
+            !Array.isArray(replay.actions) || replay.actions.length > runtime.steps) {
+            throw new PlanningDataError("PLANNING_REPLAY_METADATA_INVALID", "/inner", "Diagnostic replay metadata and continuation metadata disagree");
+        }
+    }
+    if (runtime.contactContinuation !== undefined) {
+        const continuation = runtime.contactContinuation;
+        if (!continuation || typeof continuation !== "object" || Array.isArray(continuation) ||
+            Object.keys(continuation).sort().join(",") !== "entries,nextContactKey" ||
+            !Number.isSafeInteger(continuation.nextContactKey) || continuation.nextContactKey < 0 ||
+            !Array.isArray(continuation.entries) || continuation.entries.length > 10000) {
+            throw new PlanningDataError("PLANNING_CONTACT_CONTINUATION_INVALID", "/runtime/contactContinuation", "Invalid perception contact continuation");
+        }
+        const keys = new Set(), ids = new Set();
+        continuation.entries.forEach((entry, index) => {
+            const path = `/runtime/contactContinuation/entries/${index}`;
+            const key = entry?.[0], contact = entry?.[1], previous = contact?.previous;
+            if (!Array.isArray(entry) || entry.length !== 2 || typeof key !== "string" || !key || keys.has(key) ||
+                !contact || typeof contact !== "object" || Array.isArray(contact) ||
+                !/^c[1-9][0-9]*$/.test(contact.id) || ids.has(contact.id) ||
+                !Number.isSafeInteger(contact.step) || contact.step < 0 || contact.step > runtime.steps ||
+                !Number.isSafeInteger(contact.x) || !Number.isSafeInteger(contact.y) ||
+                (previous !== undefined && (!previous || typeof previous !== "object" || Array.isArray(previous) ||
+                    !Number.isSafeInteger(previous.step) || previous.step < 0 || previous.step > contact.step ||
+                    !Number.isSafeInteger(previous.x) || !Number.isSafeInteger(previous.y)))) {
+                throw new PlanningDataError("PLANNING_CONTACT_CONTINUATION_INVALID", path, "Invalid perception contact entry");
+            }
+            keys.add(key);
+            ids.add(contact.id);
+        });
+    }
+}
+function serializePlanningEnvelope(value) {
+    validateEnvelope(value);
+    const result = JSON.stringify({ format: exports.PLANNING_FORMAT, codec: exports.PLANNING_CODEC, data: planningEncode(value) });
+    if (result.length > MAX_TEXT)
+        throw new PlanningDataError("PLANNING_SNAPSHOT_SIZE", "/", "Snapshot exceeds 24,000,000 characters");
+    return result;
+}
+exports.serializePlanningEnvelope = serializePlanningEnvelope;
+function parsePlanningEnvelope(serialized) {
+    if (typeof serialized !== "string" || !serialized.length || serialized.length > MAX_TEXT) {
+        throw new PlanningDataError("PLANNING_SNAPSHOT_SIZE", "/", "Invalid planning snapshot size");
+    }
+    let wire;
+    try {
+        wire = JSON.parse(serialized);
+    }
+    catch {
+        throw new PlanningDataError("PLANNING_JSON_INVALID", "/", "Malformed snapshot JSON");
+    }
+    if (wire?.format !== exports.PLANNING_FORMAT || wire?.codec !== exports.PLANNING_CODEC) {
+        throw new PlanningDataError("PLANNING_SNAPSHOT_VERSION", "/", "Rebuild both game realms and recapture a v3 snapshot; older snapshots lack a verified reconstruction contract");
+    }
+    const value = planningDecode(wire.data);
+    validateEnvelope(value);
+    return value;
+}
+exports.parsePlanningEnvelope = parsePlanningEnvelope;
+/** Count every downward HP assignment in the disposable simulator, not just net HP. */
+async function withGrossHealthLoss(subject, operation) {
+    const descriptor = Object.getOwnPropertyDescriptor(subject, "health");
+    if (!descriptor || !("value" in descriptor) || descriptor.configurable !== true || descriptor.writable !== true ||
+        typeof descriptor.value !== "number" || !Number.isFinite(descriptor.value)) {
+        throw new Error("Planning requires an own, configurable, writable numeric health field");
+    }
+    let health = descriptor.value, loss = 0, invalid = false;
+    const get = () => health;
+    const set = (next) => {
+        if (typeof next !== "number" || !Number.isFinite(next))
+            invalid = true;
+        else if (Number.isFinite(health) && next < health)
+            loss += health - next;
+        health = next;
+    };
+    Object.defineProperty(subject, "health", { configurable: true, enumerable: descriptor.enumerable, get, set });
+    try {
+        const result = await operation();
+        const current = Object.getOwnPropertyDescriptor(subject, "health");
+        if (invalid || !Number.isFinite(loss) || current?.get !== get || current?.set !== set) {
+            throw new Error("Health metric invalidated during planning action");
+        }
+        return { result, healthLoss: loss };
+    }
+    finally {
+        const current = Object.getOwnPropertyDescriptor(subject, "health");
+        const finalHealth = current?.get === get ? health : subject.health;
+        Object.defineProperty(subject, "health", { ...descriptor, value: finalHealth });
+    }
+}
+exports.withGrossHealthLoss = withGrossHealthLoss;
+
+
+/***/ }),
+
+/***/ "./src/game/agentPlanningAttachedLoot.ts":
+/*!***********************************************!*\
+  !*** ./src/game/agentPlanningAttachedLoot.ts ***!
+  \***********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.restorePlanningAttachedLoot = exports.capturePlanningAttachedLoot = void 0;
+/** Privileged continuation for preselected items still attached to living entities. */
+const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
+const PATH = "/runtime/attachedLootContinuation";
+function invalid(message) {
+    throw new agentPlanning_1.PlanningDataError("PLANNING_ATTACHED_LOOT_UNSUPPORTED", PATH, message);
+}
+function validate(input) {
+    const v = (0, agentPlanning_1.planningDecode)((0, agentPlanning_1.planningEncode)(input, PATH));
+    if (!v || typeof v !== "object" || Object.keys(v).sort().join(",") !== "entities,format" ||
+        v.format !== "horizon-attached-loot-v1" || !Array.isArray(v.entities) || v.entities.length > 20000)
+        invalid("Invalid attached-loot continuation");
+    const owners = new Set(), items = new Set();
+    for (const e of v.entities) {
+        if (!e || typeof e !== "object" || Object.keys(e).sort().join(",") !== "drops,gid,kind,lootDropped,roomGid" ||
+            typeof e.lootDropped !== "boolean" || !Array.isArray(e.drops) || e.drops.length > 1000)
+            invalid("Invalid attached-loot entity");
+        for (const key of ["gid", "kind", "roomGid"])
+            if (typeof e[key] !== "string" || !e[key].length || e[key].length > 512)
+                invalid("Invalid loot owner identity");
+        if (owners.has(e.gid))
+            invalid("Duplicate loot owner");
+        owners.add(e.gid);
+        for (const drop of e.drops) {
+            if (!drop || typeof drop !== "object" || typeof drop.kind !== "string" || !drop.kind.length ||
+                typeof drop.gid !== "string" || !drop.gid.length)
+                invalid("Invalid attached item");
+            if (items.has(drop.gid))
+                invalid("Duplicate attached item");
+            items.add(drop.gid);
+        }
+    }
+    return v;
+}
+function capturePlanningAttachedLoot(rooms, saveItem) {
+    const entities = [];
+    for (const room of rooms)
+        for (const entity of room.entities) {
+            if (entity.dead || !Array.isArray(entity.drops) || entity.drops.length === 0)
+                continue;
+            // Save V2 already owns drops which have been released into room.items and
+            // restores their owner references (notably opened chests). This privileged
+            // continuation is only for preselected loot still attached to its owner.
+            // Recreating world drops here would replace the owner's restored references
+            // with detached copies that pickup code cannot find in room.items.
+            const drops = entity.drops.filter((item) => !room.items.includes(item))
+                .map((item) => saveItem(item));
+            // Keep the owner even when every drop is currently represented by Save V2.
+            // A picked-up chest item can remain in room.items during its visual flight,
+            // while Save V2 intentionally omits picked-up items.  The empty attached list
+            // still carries lootDropped so a restored chest cannot reroll on destruction.
+            entities.push({ gid: entity.globalId, kind: entity.constructor.name, roomGid: room.globalId,
+                lootDropped: entity.lootDropped, drops });
+        }
+    return validate({ format: "horizon-attached-loot-v1", entities });
+}
+exports.capturePlanningAttachedLoot = capturePlanningAttachedLoot;
+function restorePlanningAttachedLoot(input, rooms, spawnItem) {
+    const v = validate(input), targets = new Map();
+    for (const room of rooms)
+        for (const entity of room.entities)
+            if (!entity.dead) {
+                if (targets.has(entity.globalId))
+                    invalid("Duplicate restored entity");
+                targets.set(entity.globalId, { entity, room });
+            }
+    const staged = v.entities.map((saved) => {
+        const target = targets.get(saved.gid);
+        if (!target || target.room.globalId !== saved.roomGid || target.entity.constructor.name !== saved.kind)
+            invalid("Missing or incompatible loot owner");
+        for (const key of ["drops", "lootDropped"]) {
+            const descriptor = Object.getOwnPropertyDescriptor(target.entity, key);
+            if (!descriptor || !("value" in descriptor) || !descriptor.writable)
+                invalid("Unsupported loot field layout");
+        }
+        const drops = saved.drops.map((drop) => spawnItem(drop, target.room));
+        if (drops.some((drop) => !drop || typeof drop !== "object"))
+            invalid("Attached item reconstruction failed");
+        return { entity: target.entity, room: target.room, drops, lootDropped: saved.lootDropped };
+    });
+    for (const entry of staged) {
+        // Preserve references restored by Save V2 for already-released world loot;
+        // append only the still-attached items reconstructed above.
+        const worldDrops = entry.entity.drops.filter((item) => entry.room.items.includes(item));
+        entry.entity.drops = [...worldDrops, ...entry.drops];
+        entry.entity.lootDropped = entry.lootDropped;
+    }
+}
+exports.restorePlanningAttachedLoot = restorePlanningAttachedLoot;
+
+
+/***/ }),
+
+/***/ "./src/game/agentPlanningEmptyLoot.ts":
+/*!********************************************!*\
+  !*** ./src/game/agentPlanningEmptyLoot.ts ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.restorePlanningEmptyLoot = exports.capturePlanningEmptyLoot = void 0;
+/** Explicitly empty preselected loot is state, not permission to reroll on load. */
+const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
+const PATH = "/runtime/emptyLootContinuation";
+function invalid(message) { throw new agentPlanning_1.PlanningDataError("PLANNING_EMPTY_LOOT_UNSUPPORTED", PATH, message); }
+function validate(input) {
+    const v = (0, agentPlanning_1.planningDecode)((0, agentPlanning_1.planningEncode)(input, PATH));
+    if (!v || typeof v !== "object" || Object.keys(v).sort().join(",") !== "entities,format" ||
+        v.format !== "horizon-empty-loot-v1" || !Array.isArray(v.entities) || v.entities.length > 20000)
+        invalid("Invalid empty-loot continuation");
+    const ids = new Set();
+    for (const e of v.entities) {
+        if (!e || typeof e !== "object" || Object.keys(e).sort().join(",") !== "gid,kind,lootDropped,roomGid" ||
+            typeof e.lootDropped !== "boolean")
+            invalid("Invalid empty-loot entity");
+        for (const k of ["gid", "kind", "roomGid"])
+            if (typeof e[k] !== "string" || !e[k].length || e[k].length > 512)
+                invalid("Invalid loot owner identity");
+        if (ids.has(e.gid))
+            invalid("Duplicate loot owner");
+        ids.add(e.gid);
+    }
+    return v;
+}
+function capturePlanningEmptyLoot(rooms) {
+    const entities = [];
+    for (const r of rooms)
+        for (const e of r.entities)
+            if (!e.dead && Array.isArray(e.drops) && e.drops.length === 0)
+                entities.push({ gid: e.globalId, kind: e.constructor.name, roomGid: r.globalId, lootDropped: e.lootDropped });
+    return validate({ format: "horizon-empty-loot-v1", entities });
+}
+exports.capturePlanningEmptyLoot = capturePlanningEmptyLoot;
+function restorePlanningEmptyLoot(input, rooms) {
+    const v = validate(input), targets = new Map();
+    for (const r of rooms)
+        for (const e of r.entities)
+            if (!e.dead) {
+                if (targets.has(e.globalId))
+                    invalid("Duplicate restored entity");
+                targets.set(e.globalId, { e, room: r.globalId });
+            }
+    const staged = v.entities.map((s) => {
+        const t = targets.get(s.gid);
+        if (!t || t.room !== s.roomGid || t.e.constructor.name !== s.kind)
+            invalid("Missing or incompatible loot owner");
+        for (const key of ["drops", "lootDropped"]) {
+            const d = Object.getOwnPropertyDescriptor(t.e, key);
+            if (!d || !("value" in d) || !d.writable)
+                invalid("Unsupported loot field layout");
+        }
+        return { e: t.e, lootDropped: s.lootDropped };
+    });
+    // Restore the captured empty collection; the real dropLoot method still decides
+    // whether to generate its ordinary fallback coin. No reward or RNG rule changes.
+    for (const { e, lootDropped } of staged) {
+        e.drops = [];
+        e.lootDropped = lootDropped;
+    }
+}
+exports.restorePlanningEmptyLoot = restorePlanningEmptyLoot;
+
+
+/***/ }),
+
+/***/ "./src/game/agentPlanningInteraction.ts":
+/*!**********************************************!*\
+  !*** ./src/game/agentPlanningInteraction.ts ***!
+  \**********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.restorePlanningInteraction = exports.capturePlanningInteraction = void 0;
+/** Planning-only restoration of the ordinary down-ladder confirmation. */
+const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
+const PATH = "/runtime/interactionContinuation";
+function invalid(message) {
+    throw new agentPlanning_1.PlanningDataError("PLANNING_INTERACTION_UNSUPPORTED", PATH, message);
+}
+function capturePlanningInteraction(player, isLadder) {
+    if (!player.screenMessage.open)
+        return null;
+    const room = player.getRoom(), tile = room.roomArray[player.x]?.[player.y];
+    if (!isLadder(tile) || tile.lockable.isLocked())
+        invalid("Open interaction is not an unlocked base DownLadder prompt");
+    return { format: "horizon-down-ladder-prompt-v1", roomGid: room.globalId,
+        x: player.x, y: player.y, z: player.z };
+}
+exports.capturePlanningInteraction = capturePlanningInteraction;
+function restorePlanningInteraction(input, player, players, isLadder) {
+    if (input == null)
+        return;
+    const v = (0, agentPlanning_1.planningDecode)((0, agentPlanning_1.planningEncode)(input, PATH));
+    if (!v || typeof v !== "object" || Object.keys(v).sort().join(",") !== "format,roomGid,x,y,z" ||
+        v.format !== "horizon-down-ladder-prompt-v1" || typeof v.roomGid !== "string" || !v.roomGid ||
+        ![v.x, v.y, v.z].every(Number.isFinite))
+        invalid("Invalid ladder prompt continuation");
+    const room = player.getRoom(), tile = room.roomArray[player.x]?.[player.y];
+    if (room.globalId !== v.roomGid || player.x !== v.x || player.y !== v.y || player.z !== v.z ||
+        !isLadder(tile) || tile.lockable.isLocked() || !players.includes(player) ||
+        players.some(p => p.getRoom() !== room || p.x !== v.x || p.y !== v.y))
+        invalid("Saved ladder prompt does not match the restored unlocked ladder and players");
+    // The guarded unlocked branch only shows the actual prompt and binds its real
+    // confirm/cancel callbacks. It does not move, unlock, generate, record or tick.
+    tile.onCollide(player);
+    if (!player.screenMessage.open)
+        invalid("Ladder did not recreate its confirmation");
+}
+exports.restorePlanningInteraction = restorePlanningInteraction;
+
+
+/***/ }),
+
+/***/ "./src/game/agentPlanningPaths.ts":
+/*!****************************************!*\
+  !*** ./src/game/agentPlanningPaths.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.restorePlanningPaths = exports.capturePlanningPaths = void 0;
+/** Planning-only cached AI route continuation. Ordinary saves intentionally omit it. */
+const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
+const PATH = "/runtime/pathContinuation";
+function invalid(message) { throw new agentPlanning_1.PlanningDataError("PLANNING_PATH_CONTINUATION_UNSUPPORTED", PATH, message); }
+function fields(value, keys) {
+    if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).sort().join(",") !== keys.sort().join(","))
+        invalid("Invalid path record fields");
+}
+function validate(value) {
+    const v = (0, agentPlanning_1.planningDecode)((0, agentPlanning_1.planningEncode)(value, PATH));
+    fields(v, ["format", "entities"]);
+    if (v.format !== "horizon-enemy-path-cache-v1" || !Array.isArray(v.entities) || v.entities.length > 20000)
+        invalid("Invalid path format or size");
+    const ids = new Set();
+    let total = 0;
+    for (const e of v.entities) {
+        fields(e, ["gid", "roomGid", "kind", "cache"]);
+        for (const k of ["gid", "roomGid", "kind"])
+            if (typeof e[k] !== "string" || !e[k].length || e[k].length > 512)
+                invalid("Invalid path entity identity");
+        if (ids.has(e.gid))
+            invalid("Duplicate path entity");
+        ids.add(e.gid);
+        if (e.cache === null)
+            continue;
+        fields(e.cache, ["moves", "targetX", "targetY", "fromX", "fromY"]);
+        for (const k of ["targetX", "targetY", "fromX", "fromY"])
+            if (!Number.isFinite(e.cache[k]))
+                invalid("Invalid cache coordinate");
+        if (!Array.isArray(e.cache.moves) || (total += e.cache.moves.length) > 20000)
+            invalid("Invalid cache moves or size");
+        for (const m of e.cache.moves) {
+            fields(m, ["pos"]);
+            fields(m.pos, ["x", "y"]);
+            if (!Number.isFinite(m.pos.x) || !Number.isFinite(m.pos.y))
+                invalid("Invalid move coordinate");
+        }
+    }
+    return v;
+}
+function capturePlanningPaths(rooms, supported) {
+    const entities = [];
+    for (const r of rooms)
+        for (const e of r.entities) {
+            if (e.dead || !Object.prototype.hasOwnProperty.call(e, "_pathCache"))
+                continue;
+            if (!supported(e))
+                invalid("Unknown cached-path implementation");
+            const c = e._pathCache;
+            // The cache and every audited consumer read only moves[].pos. AStar nodes
+            // also hold temporary search scores/parent links and live Tile.org references;
+            // none are consumed after search. Do not serialize those cyclic world graphs.
+            entities.push({ gid: e.globalId, roomGid: r.globalId, kind: e.constructor.name,
+                cache: c === null ? null : { targetX: c.targetX, targetY: c.targetY, fromX: c.fromX, fromY: c.fromY,
+                    moves: c.moves.map((m) => ({ pos: { x: m.pos.x, y: m.pos.y } })) } });
+        }
+    return validate({ format: "horizon-enemy-path-cache-v1", entities });
+}
+exports.capturePlanningPaths = capturePlanningPaths;
+function restorePlanningPaths(input, rooms, supported) {
+    const v = validate(input), targets = new Map();
+    for (const r of rooms)
+        for (const e of r.entities)
+            if (!e.dead && Object.prototype.hasOwnProperty.call(e, "_pathCache")) {
+                if (targets.has(e.globalId) || !supported(e))
+                    invalid("Duplicate or unsupported restored path entity");
+                targets.set(e.globalId, { e, room: r.globalId });
+            }
+    if (v.entities.length !== targets.size)
+        invalid("Saved/restored path entity sets differ");
+    const staged = v.entities.map((s) => {
+        const t = targets.get(s.gid), d = t && Object.getOwnPropertyDescriptor(t.e, "_pathCache");
+        if (!t || t.room !== s.roomGid || t.e.constructor.name !== s.kind || !d || !("value" in d) || !d.writable)
+            invalid("Missing or incompatible cached-path entity");
+        return { entity: t.e, cache: s.cache };
+    });
+    for (const s of staged)
+        s.entity._pathCache = s.cache;
+}
+exports.restorePlanningPaths = restorePlanningPaths;
+
+
+/***/ }),
+
+/***/ "./src/game/agentPlanningResources.ts":
+/*!********************************************!*\
+  !*** ./src/game/agentPlanningResources.ts ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.restorePlanningResources = exports.capturePlanningResources = void 0;
+/** Planning-only mutable resource state omitted by ordinary Save V2. */
+const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
+const PATH = "/runtime/resourceContinuation";
+function invalid(message) {
+    throw new agentPlanning_1.PlanningDataError("PLANNING_RESOURCE_CONTINUATION_UNSUPPORTED", PATH, message);
+}
+function validate(input) {
+    const v = (0, agentPlanning_1.planningDecode)((0, agentPlanning_1.planningEncode)(input, PATH));
+    if (!v || typeof v !== "object" || Object.keys(v).sort().join(",") !== "entities,format" ||
+        v.format !== "horizon-resource-state-v1" || !Array.isArray(v.entities) || v.entities.length > 20000)
+        invalid("Invalid resource continuation");
+    const ids = new Set();
+    for (const e of v.entities) {
+        if (!e || typeof e !== "object" ||
+            Object.keys(e).sort().join(",") !== "active,fishCount,gid,kind,roomGid,startFrame" ||
+            e.kind !== "FishingSpot" || typeof e.active !== "boolean" ||
+            !Number.isSafeInteger(e.fishCount) || e.fishCount < 0 ||
+            !Number.isFinite(e.startFrame))
+            invalid("Invalid fishing resource state");
+        for (const k of ["gid", "roomGid"])
+            if (typeof e[k] !== "string" || !e[k].length || e[k].length > 512)
+                invalid("Invalid resource identity");
+        if (ids.has(e.gid))
+            invalid("Duplicate resource identity");
+        ids.add(e.gid);
+    }
+    return v;
+}
+function capturePlanningResources(rooms, supported) {
+    const entities = [];
+    for (const r of rooms)
+        for (const e of r.entities)
+            if (!e.dead && supported(e))
+                entities.push({ gid: e.globalId, roomGid: r.globalId, kind: "FishingSpot",
+                    fishCount: e.fishCount, active: e.active, startFrame: e.startFrame });
+    return validate({ format: "horizon-resource-state-v1", entities });
+}
+exports.capturePlanningResources = capturePlanningResources;
+function restorePlanningResources(input, rooms, supported) {
+    const v = validate(input), targets = new Map();
+    for (const r of rooms)
+        for (const e of r.entities)
+            if (!e.dead && supported(e)) {
+                if (targets.has(e.globalId))
+                    invalid("Duplicate restored resource");
+                targets.set(e.globalId, { e, room: r.globalId });
+            }
+    if (v.entities.length !== targets.size)
+        invalid("Saved/restored resource sets differ");
+    const staged = v.entities.map((s) => {
+        const t = targets.get(s.gid);
+        if (!t || t.room !== s.roomGid || t.e.constructor.name !== s.kind)
+            invalid("Missing or incompatible resource");
+        for (const key of ["fishCount", "active", "startFrame"]) {
+            const d = Object.getOwnPropertyDescriptor(t.e, key);
+            if (!d || !("value" in d) || !d.writable)
+                invalid("Unsupported resource field layout");
+        }
+        return { e: t.e, state: s };
+    });
+    for (const { e, state } of staged) {
+        e.fishCount = state.fishCount;
+        e.active = state.active;
+        e.startFrame = state.startFrame;
+    }
+}
+exports.restorePlanningResources = restorePlanningResources;
+
+
+/***/ }),
+
+/***/ "./src/game/agentPlanningSpawners.ts":
+/*!*******************************************!*\
+  !*** ./src/game/agentPlanningSpawners.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.restorePlanningSpawners = exports.capturePlanningSpawners = void 0;
+/** Planning-only Spawner state omitted by ordinary Save V2. */
+const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
+const PATH = "/runtime/spawnerContinuation";
+function invalid(message) {
+    throw new agentPlanning_1.PlanningDataError("PLANNING_SPAWNER_CONTINUATION_UNSUPPORTED", PATH, message);
+}
+function validEffect(v, countKey) {
+    return !!v && typeof v === "object" &&
+        Object.keys(v).sort().join(",") === ["active", "effectTick", countKey, "startTick"].sort().join(",") &&
+        typeof v.active === "boolean" && [v[countKey], v.startTick, v.effectTick].every(Number.isFinite);
+}
+function validate(input) {
+    const v = (0, agentPlanning_1.planningDecode)((0, agentPlanning_1.planningEncode)(input, PATH));
+    if (!v || typeof v !== "object" || Object.keys(v).sort().join(",") !== "entities,format" ||
+        v.format !== "horizon-spawner-state-v1" || !Array.isArray(v.entities) || v.entities.length > 1000)
+        invalid("Invalid spawner continuation");
+    const ids = new Set();
+    for (const e of v.entities) {
+        if (!e || typeof e !== "object" ||
+            Object.keys(e).sort().join(",") !== "aggro,bleed,buffed,enemySpawnType,enemyTable,gid,heardPlayer,isBossEnemy,kind,nextSpawnTick,poison,roomGid,seenPlayer,skipNextTurns,spawnFrequency,spawnOffset,ticks" ||
+            e.kind !== "Spawner" || ![e.seenPlayer, e.heardPlayer, e.aggro, e.isBossEnemy].every(v => typeof v === "boolean") ||
+            !(e.buffed === undefined || typeof e.buffed === "boolean") ||
+            !Array.isArray(e.enemyTable) || e.enemyTable.length > 128 ||
+            !e.enemyTable.every((n) => Number.isSafeInteger(n) && n >= 0) ||
+            ![e.enemySpawnType, e.ticks, e.spawnFrequency, e.spawnOffset, e.nextSpawnTick, e.skipNextTurns]
+                .every(n => Number.isSafeInteger(n) && n >= 0) ||
+            !validEffect(e.poison, "hitCount") || !validEffect(e.bleed, "hitCount"))
+            invalid("Invalid spawner state");
+        for (const key of ["gid", "roomGid"])
+            if (typeof e[key] !== "string" || !e[key].length || e[key].length > 512)
+                invalid("Invalid spawner identity");
+        if (ids.has(e.gid))
+            invalid("Duplicate spawner identity");
+        ids.add(e.gid);
+    }
+    return v;
+}
+function capturePlanningSpawners(rooms, supported) {
+    const entities = [];
+    for (const room of rooms)
+        for (const e of room.entities)
+            if (!e.dead && supported(e))
+                entities.push({ gid: e.globalId, roomGid: room.globalId, kind: "Spawner",
+                    enemyTable: [...e.enemyTable], enemySpawnType: e.enemySpawnType, ticks: e.ticks,
+                    spawnFrequency: e.spawnFrequency, spawnOffset: e.spawnOffset, nextSpawnTick: e.nextSpawnTick,
+                    seenPlayer: e.seenPlayer, heardPlayer: e.heardPlayer, aggro: e.aggro, buffed: e.buffed,
+                    skipNextTurns: e.skipNextTurns, poison: { ...e.status.poison }, bleed: { ...e.status.bleed },
+                    isBossEnemy: e.isBossEnemy });
+    return validate({ format: "horizon-spawner-state-v1", entities });
+}
+exports.capturePlanningSpawners = capturePlanningSpawners;
+function restorePlanningSpawners(input, rooms, supported) {
+    const v = validate(input), targets = new Map();
+    for (const room of rooms)
+        for (const e of room.entities)
+            if (!e.dead && supported(e)) {
+                if (targets.has(e.globalId))
+                    invalid("Duplicate restored spawner");
+                targets.set(e.globalId, { e, room: room.globalId });
+            }
+    if (v.entities.length !== targets.size)
+        invalid("Saved/restored spawner sets differ");
+    const staged = v.entities.map((state) => {
+        const target = targets.get(state.gid);
+        if (!target || target.room !== state.roomGid || target.e.constructor.name !== state.kind)
+            invalid("Missing or incompatible spawner");
+        for (const key of ["enemyTable", "enemySpawnType", "ticks", "spawnFrequency", "spawnOffset", "nextSpawnTick", "seenPlayer",
+            "heardPlayer", "aggro", "skipNextTurns", "status", "isBossEnemy"]) {
+            const descriptor = Object.getOwnPropertyDescriptor(target.e, key);
+            if (!descriptor || !("value" in descriptor) || !descriptor.writable)
+                invalid("Unsupported spawner field layout");
+        }
+        const buffedDescriptor = Object.getOwnPropertyDescriptor(target.e, "buffed");
+        if (buffedDescriptor && (!("value" in buffedDescriptor) || !buffedDescriptor.writable))
+            invalid("Unsupported spawner field layout");
+        return { e: target.e, state };
+    });
+    for (const { e, state } of staged) {
+        e.enemyTable = [...state.enemyTable];
+        e.enemySpawnType = state.enemySpawnType;
+        e.ticks = state.ticks;
+        e.spawnFrequency = state.spawnFrequency;
+        e.spawnOffset = state.spawnOffset;
+        e.nextSpawnTick = state.nextSpawnTick;
+        e.seenPlayer = state.seenPlayer;
+        e.heardPlayer = state.heardPlayer;
+        e.aggro = state.aggro;
+        e.buffed = state.buffed;
+        e.skipNextTurns = state.skipNextTurns;
+        e.status.poison = { ...state.poison };
+        e.status.bleed = { ...state.bleed };
+        e.isBossEnemy = state.isBossEnemy;
+    }
+}
+exports.restorePlanningSpawners = restorePlanningSpawners;
+
+
+/***/ }),
+
+/***/ "./src/game/agentPlanningWarnings.ts":
+/*!*******************************************!*\
+  !*** ./src/game/agentPlanningWarnings.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.restoreWarningContinuation = exports.readWarningContinuation = exports.captureWarningContinuation = exports.WARNING_CONTINUATION_FORMAT = void 0;
+/** Planning-only continuation of warning identity/lifecycle omitted by ordinary Save V2.
+ * Never serializes live objects, changes save codecs, or edits the visible world.
+ */
+const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
+exports.WARNING_CONTINUATION_FORMAT = "horizon-warning-graph-v1";
+const RETIRED_PARENT_KINDS = ["ZombieEnemy", "CrabEnemy", "SkullEnemy"];
+const retiredSources = new WeakMap();
+const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+function invalid(path, message) {
+    throw new agentPlanning_1.PlanningDataError("PLANNING_WARNING_CONTINUATION_UNSUPPORTED", path, message);
+}
+const ROOT = "/runtime/warningContinuation";
+function id(v, path) {
+    if (typeof v !== "string" || !v.length || v.length > 512)
+        invalid(path, "Expected a nonempty stable ID");
+}
+function data(o, key, path) {
+    const d = Object.getOwnPropertyDescriptor(o, key);
+    if (!d || !("value" in d))
+        invalid(path, "Missing own data field " + key);
+    return d.value;
+}
+function fields(o, keys, path) {
+    if (!o || typeof o !== "object" || Array.isArray(o) ||
+        Object.keys(o).sort().join(",") !== keys.slice().sort().join(","))
+        invalid(path, "Unexpected record fields");
+}
+function topology(rooms) {
+    const roomMap = new Map(), entities = new Map();
+    for (const r of rooms) {
+        id(r.globalId, ROOT + "/roomGid");
+        if (roomMap.has(r.globalId))
+            invalid(ROOT, "Duplicate room identity");
+        roomMap.set(r.globalId, r);
+        for (const raw of r.entities) {
+            const e = raw;
+            // Save V2's entity stream excludes dead entities. Never fabricate a missing parent.
+            if (e.dead)
+                continue;
+            id(e.globalId, ROOT + "/entityGid");
+            if (entities.has(e.globalId))
+                invalid(ROOT, "Duplicate entity identity");
+            entities.set(e.globalId, e);
+        }
+    }
+    return { roomMap, entities };
+}
+/** Capture order and aliasing as well as each base HitWarning's exact tick state. */
+function captureWarningContinuation(rooms) {
+    const { entities } = topology(rooms);
+    const result = { format: exports.WARNING_CONTINUATION_FORMAT, rooms: [] };
+    const retired = new Map();
+    const warningRooms = new Map();
+    for (const r of rooms) {
+        const path = ROOT + "/rooms/" + result.rooms.length;
+        const pool = new Map(), warnings = [];
+        const add = (raw) => {
+            if (!raw || typeof raw !== "object")
+                invalid(path, "Invalid warning object");
+            const w = raw;
+            if (pool.has(w))
+                return pool.get(w);
+            if (warningRooms.has(w) && warningRooms.get(w) !== r.globalId)
+                invalid(path, "A warning shared across room pools requires an explicit cross-room codec");
+            warningRooms.set(w, r.globalId);
+            // Subclasses can change tick semantics. They need an explicit codec, not a guessed base cast.
+            if (w.constructor?.name !== "HitWarning" || w.skipSave !== false || typeof w.getSaveFields !== "function")
+                invalid(path + "/warnings/" + warnings.length, "Unsupported warning class: " + String(w.constructor?.name));
+            const parent = w.parent;
+            if (parent !== null && (!parent || entities.get(parent.globalId) !== parent)) {
+                const previous = parent && retiredSources.get(parent);
+                if (parent && parent.dead === true && !entities.has(parent.globalId) &&
+                    !rooms.some(room => room.entities.includes(parent)) &&
+                    (previous || RETIRED_PARENT_KINDS.includes(String(parent.constructor?.name)))) {
+                    const state = previous || {
+                        globalId: data(parent, "globalId", path), kind: parent.constructor.name, dead: data(parent, "dead", path),
+                        unconscious: data(parent, "unconscious", path), x: data(parent, "x", path), y: data(parent, "y", path),
+                        z: data(parent, "z", path), w: data(parent, "w", path), h: data(parent, "h", path),
+                    };
+                    const existing = retired.get(parent.globalId);
+                    if (existing && existing.source !== parent)
+                        invalid(path, "Conflicting retired parent identity");
+                    retired.set(parent.globalId, { source: parent, state });
+                }
+                else {
+                    throw new agentPlanning_1.PlanningDataError("PLANNING_WARNING_CONTINUATION_UNSUPPORTED", path + "/warnings/" + warnings.length + "/parentGid", "Warning parent is absent from the saved live-entity set", {
+                        phase: "warning.capture", expected: "Saved live entity or audited retired warning source",
+                        actual: JSON.stringify({ roomGid: r.globalId, parentGid: parent?.globalId,
+                            parentKind: parent?.constructor?.name, parentDead: parent?.dead,
+                            parentInRooms: rooms.filter(room => room.entities.includes(parent)).map(room => room.globalId),
+                            warningDead: w.dead, warningTickedForDeath: w.tickedForDeath }),
+                    });
+                }
+            }
+            const saved = w.getSaveFields();
+            const state = {
+                x: data(w, "x", path), y: data(w, "y", path),
+                eX: saved.eX, eY: saved.eY, isEnemy: saved.isEnemy, dirOnly: saved.dirOnly,
+                dead: data(w, "dead", path),
+                tickedForDeath: data(w, "tickedForDeath", path),
+                alpha: data(w, "alpha", path), parentGid: parent === null ? null : parent.globalId,
+            };
+            const index = warnings.length;
+            pool.set(w, index);
+            warnings.push(state);
+            return index;
+        };
+        const roomWarnings = r.hitwarnings.map(add), owners = [];
+        for (const raw of r.entities) {
+            const e = raw;
+            if (e.dead || !Array.isArray(e.hitWarnings))
+                continue;
+            owners.push({ gid: e.globalId, warnings: e.hitWarnings.map(add) });
+        }
+        result.rooms.push({ roomGid: r.globalId, warnings, roomWarnings, owners });
+    }
+    if (retired.size)
+        result.retiredParents = { format: "horizon-retired-warning-parents-v1",
+            sources: Array.from(retired.values(), entry => entry.state) };
+    return readWarningContinuation(result);
+}
+exports.captureWarningContinuation = captureWarningContinuation;
+/** Strict bounded data validation precedes factory calls and live-object mutation. */
+function readWarningContinuation(input) {
+    // The existing lossless codec rejects cycles, getters, functions and unbounded trees.
+    const v = (0, agentPlanning_1.planningDecode)((0, agentPlanning_1.planningEncode)(input, ROOT));
+    fields(v, own(v, "retiredParents") ? ["format", "rooms", "retiredParents"] : ["format", "rooms"], ROOT);
+    if (v.format !== exports.WARNING_CONTINUATION_FORMAT || !Array.isArray(v.rooms) || v.rooms.length > 4096)
+        invalid(ROOT, "Unsupported warning graph format or size");
+    if (v.retiredParents !== undefined) {
+        const p = ROOT + "/retiredParents", refs = v.retiredParents;
+        fields(refs, ["format", "sources"], p);
+        if (refs.format !== "horizon-retired-warning-parents-v1" || !Array.isArray(refs.sources) ||
+            refs.sources.length > 20000)
+            invalid(p, "Unsupported retired parent codec or size");
+        const ids = new Set();
+        for (const s of refs.sources) {
+            fields(s, ["globalId", "kind", "dead", "unconscious", "x", "y", "z", "w", "h"], p);
+            id(s.globalId, p + "/globalId");
+            if (ids.has(s.globalId) || !RETIRED_PARENT_KINDS.includes(s.kind) || s.dead !== true || typeof s.unconscious !== "boolean")
+                invalid(p, "Invalid or duplicate retired parent");
+            ids.add(s.globalId);
+            for (const k of ["x", "y", "z", "w", "h"])
+                if (!Number.isFinite(s[k]))
+                    invalid(p + "/" + k, "Expected finite parent geometry");
+            if (s.w <= 0 || s.h <= 0)
+                invalid(p, "Invalid parent footprint");
+        }
+    }
+    const roomIds = new Set(), ownerIds = new Set();
+    let count = 0;
+    for (let n = 0; n < v.rooms.length; n++) {
+        const r = v.rooms[n], p = ROOT + "/rooms/" + n;
+        fields(r, ["roomGid", "warnings", "roomWarnings", "owners"], p);
+        id(r.roomGid, p + "/roomGid");
+        if (roomIds.has(r.roomGid))
+            invalid(p, "Duplicate room identity");
+        roomIds.add(r.roomGid);
+        if (!Array.isArray(r.warnings) || !Array.isArray(r.owners) || (count += r.warnings.length) > 20000)
+            invalid(p, "Invalid or oversized warning pool");
+        const indices = (list, at) => {
+            if (!Array.isArray(list) || list.length > 20000 || Object.keys(list).length !== list.length || list.some(i => !Number.isSafeInteger(i) || i < 0 || i >= r.warnings.length))
+                invalid(at, "Invalid warning-pool reference");
+        };
+        indices(r.roomWarnings, p + "/roomWarnings");
+        for (let i = 0; i < r.warnings.length; i++) {
+            const w = r.warnings[i], q = p + "/warnings/" + i;
+            fields(w, ["x", "y", "eX", "eY", "isEnemy", "dirOnly", "dead", "tickedForDeath", "alpha", "parentGid"], q);
+            for (const k of ["x", "y", "alpha"])
+                if (!Number.isFinite(w[k]))
+                    invalid(q + "/" + k, "Expected finite number");
+            for (const k of ["eX", "eY"])
+                if (w[k] !== undefined && !Number.isFinite(w[k]))
+                    invalid(q + "/" + k, "Expected optional finite number");
+            for (const k of ["isEnemy", "dirOnly", "dead", "tickedForDeath"])
+                if (typeof w[k] !== "boolean")
+                    invalid(q + "/" + k, "Expected boolean");
+            if (w.parentGid !== null)
+                id(w.parentGid, q + "/parentGid");
+        }
+        for (const o of r.owners) {
+            fields(o, ["gid", "warnings"], p + "/owners");
+            id(o.gid, p + "/owners/gid");
+            if (ownerIds.has(o.gid))
+                invalid(p, "Duplicate warning owner");
+            ownerIds.add(o.gid);
+            indices(o.warnings, p + "/owners/" + o.gid);
+        }
+    }
+    return v;
+}
+exports.readWarningContinuation = readWarningContinuation;
+/** Restore into the isolated, already-loaded game. Callers enforce simulator-only access. */
+function restoreWarningContinuation(input, rooms, make) {
+    const value = readWarningContinuation(input), { roomMap, entities } = topology(rooms);
+    const parents = new Map(entities);
+    for (const s of value.retiredParents?.sources || []) {
+        if (parents.has(s.globalId))
+            invalid(ROOT + "/retiredParents", "Retired source collides with live entity");
+        const source = Object.freeze({ ...s });
+        retiredSources.set(source, source);
+        parents.set(s.globalId, source);
+    }
+    if (value.rooms.length !== roomMap.size)
+        invalid(ROOT + "/rooms", "Saved/restored room sets differ");
+    // Validate every reference before constructing anything. Missing references fail closed.
+    for (const r of value.rooms) {
+        const room = roomMap.get(r.roomGid);
+        if (!room)
+            invalid(ROOT, "Saved room missing: " + r.roomGid);
+        for (const w of r.warnings)
+            if (w.parentGid !== null && !parents.has(w.parentGid))
+                invalid(ROOT + "/parentGid", "Saved parent missing: " + w.parentGid);
+        for (const o of r.owners)
+            if (!entities.has(o.gid) || !room.entities.includes(entities.get(o.gid)))
+                invalid(ROOT + "/owners", "Saved owner missing from its room: " + o.gid);
+    }
+    const staged = value.rooms.map(r => {
+        const pool = r.warnings.map(s => {
+            const parent = s.parentGid === null ? null : parents.get(s.parentGid);
+            const w = make(s, parent);
+            if (!w || w.constructor?.name !== "HitWarning")
+                invalid(ROOT, "Factory must construct the base HitWarning");
+            for (const k of ["x", "y", "eX", "eY", "isEnemy", "dirOnly", "dead", "tickedForDeath", "alpha"]) {
+                const d = Object.getOwnPropertyDescriptor(w, k);
+                if (!d || !("value" in d) || !d.writable)
+                    invalid(ROOT + "/" + k, "Unsupported warning field layout");
+                w[k] = s[k];
+            }
+            w.parent = parent;
+            return w;
+        });
+        return { room: roomMap.get(r.roomGid), list: r.roomWarnings.map(i => pool[i]),
+            owners: r.owners.map(o => ({ owner: entities.get(o.gid), list: o.warnings.map(i => pool[i]) })) };
+    });
+    for (const s of staged) {
+        s.room.hitwarnings = s.list;
+        for (const o of s.owners)
+            o.owner.hitWarnings = o.list;
+    }
+}
+exports.restoreWarningContinuation = restoreWarningContinuation;
 
 
 /***/ }),
@@ -51913,10 +53422,23 @@ const validateEnemySaveV2 = (v, path) => {
     if (kind === "chest") {
         const opened = get(v, "opened");
         const destroyable = get(v, "destroyable");
+        const spawnedItemGidsU = get(v, "spawnedItemGids");
         if (!isBoolean(opened))
             return (0, errors_1.err)({ kind: "InvalidSchema", message: "opened must be boolean", path: `${path}.opened` });
         if (!isBoolean(destroyable))
             return (0, errors_1.err)({ kind: "InvalidSchema", message: "destroyable must be boolean", path: `${path}.destroyable` });
+        let spawnedItemGids;
+        if (spawnedItemGidsU !== undefined) {
+            if (!Array.isArray(spawnedItemGidsU))
+                return (0, errors_1.err)({ kind: "InvalidSchema", message: "spawnedItemGids must be array if present", path: `${path}.spawnedItemGids` });
+            spawnedItemGids = [];
+            for (let i = 0; i < spawnedItemGidsU.length; i++) {
+                const gid = asGid(spawnedItemGidsU[i], `${path}.spawnedItemGids[${i}]`);
+                if (isErr(gid))
+                    return (0, errors_1.err)(gid.error);
+                spawnedItemGids.push(gid.value);
+            }
+        }
         return (0, errors_1.ok)({
             kind,
             gid: gidR.value,
@@ -51929,7 +53451,7 @@ const validateEnemySaveV2 = (v, path) => {
             dead,
             opened,
             destroyable,
-            spawnedItemGids: undefined,
+            spawnedItemGids,
         });
     }
     if (kind === "vending_machine") {
@@ -54378,7 +55900,7 @@ exports.markTutorialHintShown = markTutorialHintShown;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.IdGenerator = void 0;
+exports.IdGenerator = exports.readIdGeneratorSnapshot = exports.IdGeneratorSnapshotError = exports.ID_GENERATOR_SNAPSHOT_FORMAT = void 0;
 /**
  * Global, monotonic ID generator.
  * ------------------------------------------------------------------
@@ -54389,6 +55911,55 @@ exports.IdGenerator = void 0;
  *   immediately—very useful during integration and debugging.
  * ------------------------------------------------------------------
  */
+exports.ID_GENERATOR_SNAPSHOT_FORMAT = "id-generator-state-v1";
+class IdGeneratorSnapshotError extends Error {
+    constructor(path, message) {
+        super(`${"PLANNING_ID_STATE_INVALID"} at ${path}: ${message}`);
+        this.path = path;
+        this.name = "IdGeneratorSnapshotError";
+        this.code = "PLANNING_ID_STATE_INVALID";
+    }
+}
+exports.IdGeneratorSnapshotError = IdGeneratorSnapshotError;
+/** Validate completely and detach before any allocator mutation. Never converts via Number. */
+function readIdGeneratorSnapshot(value, path = "/allocator") {
+    const invalid = (suffix, message) => { throw new IdGeneratorSnapshotError(path + suffix, message); };
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        invalid("", "Expected allocator record");
+    const record = value;
+    const keys = Object.keys(record).sort();
+    if (keys.join(",") !== "format,next,reserved")
+        invalid("", "Unexpected allocator fields");
+    for (const key of keys)
+        if (!("value" in Object.getOwnPropertyDescriptor(record, key)))
+            invalid("/" + key, "Accessors are not data");
+    if (record.format !== exports.ID_GENERATOR_SNAPSHOT_FORMAT)
+        invalid("/format", "Unsupported allocator version");
+    if (typeof record.next !== "string" || !/^[1-9][0-9]{0,79}$/.test(record.next))
+        invalid("/next", "Expected a positive canonical decimal integer");
+    const input = record.reserved;
+    if (!Array.isArray(input) || input.length > 200000)
+        invalid("/reserved", "Expected at most 200000 reservations");
+    const list = input, reserved = [];
+    if (Object.keys(list).length !== list.length)
+        invalid("/reserved", "Sparse or named array data is unsupported");
+    let previous = null;
+    for (let i = 0; i < list.length; i++) {
+        const descriptor = Object.getOwnPropertyDescriptor(list, String(i));
+        if (!descriptor || !("value" in descriptor))
+            invalid("/reserved/" + i, "Missing or accessor reservation");
+        const id = descriptor.value;
+        if (typeof id !== "string" || !id.length || id.length > 512)
+            invalid("/reserved/" + i, "Expected a nonempty ID, at most 512 characters");
+        const text = id;
+        if (previous !== null && previous >= text)
+            invalid("/reserved/" + i, "Reservations must be sorted and unique");
+        previous = text;
+        reserved.push(text);
+    }
+    return Object.freeze({ format: exports.ID_GENERATOR_SNAPSHOT_FORMAT, next: record.next, reserved: Object.freeze(reserved) });
+}
+exports.readIdGeneratorSnapshot = readIdGeneratorSnapshot;
 class IdGenerator {
     /**
      * Generate a fresh globally-unique ID.
@@ -54396,6 +55967,7 @@ class IdGenerator {
      */
     static generate(prefix = "") {
         let id;
+        this._simulationSnapshot = null;
         // Loop is almost always single-pass; guarantees collision-free result.
         do {
             const raw = (this._next++).toString(36); // base-36 for brevity
@@ -54412,11 +55984,32 @@ class IdGenerator {
         if (this._registry.has(existingId)) {
             throw new Error(`Duplicate ID detected while reserving: ${existingId}`);
         }
+        this._simulationSnapshot = null;
         this._registry.add(existingId);
     }
     /** Quick check: has the ID been claimed already? */
     static isReserved(id) {
         return this._registry.has(id);
+    }
+    /** Read-only: captures both the counter and collision reservations, not just the next ID. */
+    static captureSimulationState() {
+        if (!this._simulationSnapshot) {
+            this._simulationSnapshot = readIdGeneratorSnapshot({ format: exports.ID_GENERATOR_SNAPSHOT_FORMAT,
+                next: this._next.toString(10), reserved: Array.from(this._registry).sort() });
+        }
+        return this._simulationSnapshot;
+    }
+    /**
+     * Caller must be replacing a discarded world in an isolated simulation realm.
+     * Never invoke this to renumber an existing world or on the visible live agent.
+     * All validation and allocation finish before either static field changes.
+     */
+    static restoreSimulationState(value) {
+        const snapshot = readIdGeneratorSnapshot(value);
+        const next = BigInt(snapshot.next), registry = new Set(snapshot.reserved);
+        this._next = next;
+        this._registry = registry;
+        this._simulationSnapshot = snapshot;
     }
     /**
      * Reset generator and registry—intended only for automated tests.
@@ -54424,6 +56017,7 @@ class IdGenerator {
     static resetForTest() {
         this._next = BigInt(1);
         this._registry.clear();
+        this._simulationSnapshot = null;
     }
     /**
      * Clear only the in-memory registry, without touching the monotonic counter.
@@ -54434,6 +56028,7 @@ class IdGenerator {
      */
     static clearRegistryForLoad() {
         this._registry.clear();
+        this._simulationSnapshot = null;
     }
 }
 exports.IdGenerator = IdGenerator;
@@ -54441,6 +56036,8 @@ exports.IdGenerator = IdGenerator;
 IdGenerator._next = BigInt(1);
 /** Registry of every ID produced or reserved this session. */
 IdGenerator._registry = new Set();
+/** One immutable memento per allocator revision. Never caches gameplay/fingerprint state. */
+IdGenerator._simulationSnapshot = null;
 
 
 /***/ }),
@@ -79062,6 +80659,16 @@ class Player extends drawable_1.Drawable {
         this.isPushMoveInputLocked = () => {
             return this.pushMoveInputLockActive;
         };
+        /** Finish the same visual readiness gate when no renderer is being scheduled. */
+        this.advancePushMoveInputVisuals = (delta) => {
+            if (!this.pushMoveInputLockActive)
+                return;
+            for (const entity of this.pushMoveInputLockEntities) {
+                if (!entity.dead)
+                    entity.advanceMovementVisuals(delta);
+            }
+            this.updatePushMoveInputLock();
+        };
         /** Called from the renderer each frame to release the lock once visuals have mostly settled. */
         this.updatePushMoveInputLock = () => {
             if (!this.pushMoveInputLockActive)
@@ -100894,7 +102501,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("c0085c7b5f82ea038f90")
+/******/ 		__webpack_require__.h = () => ("8f94c80d349eda297cc4")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

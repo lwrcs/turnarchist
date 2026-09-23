@@ -1,0 +1,11 @@
+<!doctype html><meta charset="utf-8"><title>Horizon action settlement probe</title>
+<button id="run">Run isolated skeleton probe</button><pre id="report">Idle</pre>
+<button id="preserved">Replay preserved blocked encounter</button><pre id="preserved-report">Idle</pre>
+<button id="live-check">Run ordinary live-controller check</button><pre id="live-report">Idle</pre>
+<button id="ladder-check">Run down-ladder confirmation check</button><pre id="ladder-report">Idle</pre>
+<button id="chest-check">Run chest open/pickup check</button><pre id="chest-report">Idle</pre>
+<iframe id="world" src="play.html?agent=1" title="Probe world"></iframe>
+<script src="agent-simulation-host.js?v=interaction-fidelity-2"></script><script src="agent-horizon-core.js?v=interaction-fidelity-2"></script><script src="agent-horizon-host.js?v=interaction-fidelity-2"></script>
+<script src="agent-horizon-goals.js?v=interaction-fidelity-2"></script><script src="agent-horizon-controller.js?v=interaction-fidelity-2"></script>
+<script src="training/horizon-live-smoke.js?v=20260922-visual-readiness"></script>
+<script src="training/horizon-action-probe.js?v=interaction-fidelity-2"></script>

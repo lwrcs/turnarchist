@@ -1,0 +1,5 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Horizon multi-room validation</title>
+<h1>Dedicated multi-room smoke test</h1><p>This page is used only by the explicit validation runner. It advances its own game, not another play/training session.</p>
+<iframe id="game" src="./play.html?agent=1" title="Dedicated live validation world" style="width:720px;height:540px"></iframe>
+<script src="./agent-simulation-host.js"></script><script src="./agent-horizon-core.js"></script><script src="./agent-horizon-host.js"></script><script src="./agent-horizon-goals.js"></script><script src="./agent-horizon-controller.js"></script><script src="./training/horizon-smoke-session.js"></script><script src="./training/horizon-room-smoke.js"></script>
+<script>window.AgentHorizonSmoke=window.AgentHorizonRoomSmoke;</script></html>

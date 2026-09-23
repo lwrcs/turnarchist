@@ -1893,10 +1893,22 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
   if (kind === "chest") {
     const opened = get(v, "opened");
     const destroyable = get(v, "destroyable");
+    const spawnedItemGidsU = get(v, "spawnedItemGids");
     if (!isBoolean(opened))
       return err({ kind: "InvalidSchema", message: "opened must be boolean", path: `${path}.opened` });
     if (!isBoolean(destroyable))
       return err({ kind: "InvalidSchema", message: "destroyable must be boolean", path: `${path}.destroyable` });
+    let spawnedItemGids: Gid[] | undefined;
+    if (spawnedItemGidsU !== undefined) {
+      if (!Array.isArray(spawnedItemGidsU))
+        return err({ kind: "InvalidSchema", message: "spawnedItemGids must be array if present", path: `${path}.spawnedItemGids` });
+      spawnedItemGids = [];
+      for (let i = 0; i < spawnedItemGidsU.length; i++) {
+        const gid = asGid(spawnedItemGidsU[i], `${path}.spawnedItemGids[${i}]`);
+        if (isErr(gid)) return err(gid.error);
+        spawnedItemGids.push(gid.value);
+      }
+    }
     return ok({
       kind,
       gid: gidR.value,
@@ -1909,7 +1921,7 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
       dead,
       opened,
       destroyable,
-      spawnedItemGids: undefined,
+      spawnedItemGids,
     });
   }
   if (kind === "vending_machine") {

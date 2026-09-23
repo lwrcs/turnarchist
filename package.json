@@ -8,7 +8,7 @@
   "description": "A turn-based roguelike dungeon crawler",
   "main": "index.js",
   "scripts": {
-    "watch": "concurrently \"webpack --watch\" \"webpack --config webpack.config.js --watch\"",
+    "watch": "webpack --config webpack.config.js --watch",
     "build": "webpack --mode production",
     "dev": "npx http-server . -p 8080 -c-1 --cors",
     "read:db:csv": "cd server && npm run read:db:csv",
