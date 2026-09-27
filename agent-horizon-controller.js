@@ -29,6 +29,12 @@
     try {left=JSON.parse(expected);right=JSON.parse(actual);} catch(_) {return fail('HORIZON_EXECUTION_DIVERGED');}
     const stack=[[left,right,path]];let visited=0;
     const show=v=>{const t=JSON.stringify(v);return t===undefined?'missing':t.slice(0,180);};
+    const context=p=>{
+      const m=/^\/observation\/room\/entities\/(\d+)(?:\/|$)/.exec(p);
+      if(!m)return {};
+      const i=Number(m[1]),a=left?.room?.entities?.[i],b=right?.room?.entities?.[i];
+      return {expectedEntity:show(a),actualEntity:show(b)};
+    };
     const ptr=(p,k)=>p+'/'+String(k).replace(/~/g,'~0').replace(/\//g,'~1');
     while(stack.length&&++visited<=20000){
       const [a,b,p]=stack.pop();if(Object.is(a,b))continue;
@@ -46,7 +52,7 @@
       if(!tagged&&a&&b&&typeof a==='object'&&typeof b==='object'&&Array.isArray(a)===Array.isArray(b)){
         for(const k of [...new Set([...Object.keys(a),...Object.keys(b)])].sort().reverse())stack.push([a[k],b[k],ptr(p,k)]);continue;
       }
-      if(JSON.stringify(a)!==JSON.stringify(b))return Object.assign(fail('HORIZON_EXECUTION_DIVERGED'),{path:p,details:{expected:show(a),actual:show(b)}});
+      if(JSON.stringify(a)!==JSON.stringify(b))return Object.assign(fail('HORIZON_EXECUTION_DIVERGED'),{path:p,details:{expected:show(a),actual:show(b),...context(p)}});
     }
     return Object.assign(fail('HORIZON_EXECUTION_DIVERGED','Complete successor identity differs; diagnostic walk bounded'),{path});
   }
@@ -170,6 +176,12 @@
           if (run.goal && run.goal.roomId!==view.room.id) {
             if (run.manualGoal) return finish(run,'BLOCKED','manual-goal-origin-changed');
             run.goal=null;
+          }
+          // HORIZON_EXPEDITION_INTENT_V1: optional bounded intent preemption, never action admission.
+          if (!run.manualGoal && run.goal && typeof selector.shouldReselect === 'function') {
+            const reselect = selector.shouldReselect({ view: copy(view), goal: copy(run.goal) });
+            if (typeof reselect !== 'boolean') throw fail('HORIZON_SELECTOR_INVALID', 'shouldReselect must return a boolean synchronously');
+            if (reselect) run.goal = null;
           }
           if (!run.goal) {
             run.state='SELECTING';
@@ -309,5 +321,5 @@
     return Object.freeze({ start, stop, failureReproduction: () => planner.failureReproduction?.() || null, snapshot:()=>last?copy(last):{version:VERSION,state:'IDLE',quarantined},
       get running(){return !!active;}, dispose(){disposed=true;stop('disposed'); if(ownedPlanner)planner.dispose?.();} });
   }
-  return { VERSION, DEFAULTS, PLAN_DEFAULTS, optionsFor, selectSequence, create };
+  return { VERSION, DEFAULTS, PLAN_DEFAULTS, optionsFor, selectSequence, create, intentPreemptionVersion: 1 };
 });

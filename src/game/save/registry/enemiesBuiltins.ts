@@ -245,6 +245,11 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
       ticks: isEnemy && typeof value.ticks === "number" ? value.ticks : undefined,
       alertTicks: typeof value.alertTicks === "number" ? value.alertTicks : undefined,
       unconscious: value.unconscious === true ? true : undefined,
+      ticksSinceFirstHit:
+        (value instanceof SkullEnemy || value instanceof ArmoredSkullEnemy || value instanceof BigSkullEnemy) &&
+        Number.isSafeInteger(value.ticksSinceFirstHit) && value.ticksSinceFirstHit >= 0
+          ? value.ticksSinceFirstHit
+          : undefined,
       skipNextTurns: typeof value.skipNextTurns === "number" ? value.skipNextTurns : undefined,
       shield: value.shield ? { health: value.shield.health } : undefined,
       buffed: value.buffed === true ? true : undefined,
@@ -304,6 +309,10 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
     if (e instanceof Enemy && "ticks" in value && typeof value.ticks === "number") e.ticks = value.ticks;
     if ("alertTicks" in value && typeof value.alertTicks === "number") e.alertTicks = value.alertTicks;
     if ("unconscious" in value && typeof value.unconscious === "boolean") e.unconscious = value.unconscious;
+    if (
+      (e instanceof SkullEnemy || e instanceof ArmoredSkullEnemy || e instanceof BigSkullEnemy) &&
+      "ticksSinceFirstHit" in value && typeof value.ticksSinceFirstHit === "number"
+    ) e.ticksSinceFirstHit = value.ticksSinceFirstHit;
     if ("skipNextTurns" in value && typeof value.skipNextTurns === "number") e.skipNextTurns = value.skipNextTurns;
     if ("buffedBefore" in value && typeof value.buffedBefore === "boolean") e.buffedBefore = value.buffedBefore;
     if ("buffed" in value && typeof value.buffed === "boolean") e.buffed = value.buffed;
@@ -809,5 +818,3 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
 };
 
 export const getEnemyKindV2 = (e: Entity): EnemyKind | null => entityToKind(e);
-
-

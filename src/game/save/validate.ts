@@ -2152,6 +2152,7 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
   const ticksU = get(v, "ticks");
   const alertTicksU = get(v, "alertTicks");
   const unconsciousU = get(v, "unconscious");
+  const ticksSinceFirstHitU = get(v, "ticksSinceFirstHit");
   const skipNextTurnsU = get(v, "skipNextTurns");
   const shieldU = get(v, "shield");
   const buffedU = get(v, "buffed");
@@ -2211,6 +2212,17 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
         path: `${path}.unconscious`,
       });
     unconscious = unconsciousU;
+  }
+
+  let ticksSinceFirstHit: number | undefined = undefined;
+  if (ticksSinceFirstHitU !== undefined) {
+    if (!Number.isSafeInteger(ticksSinceFirstHitU) || (ticksSinceFirstHitU as number) < 0)
+      return err({
+        kind: "InvalidSchema",
+        message: "ticksSinceFirstHit must be a non-negative safe integer if present",
+        path: `${path}.ticksSinceFirstHit`,
+      });
+    ticksSinceFirstHit = ticksSinceFirstHitU as number;
   }
 
   let skipNextTurns: number | undefined = undefined;
@@ -2477,6 +2489,7 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
     ticks,
     alertTicks,
     unconscious,
+    ticksSinceFirstHit,
     skipNextTurns,
     shield,
     buffed,

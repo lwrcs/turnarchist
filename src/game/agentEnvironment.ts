@@ -335,6 +335,46 @@ export class AgentEnvironment {
 
   private player() { return this.game.players[this.game.localPlayerID]; }
 
+  /** HORIZON_EXPEDITION_V1: real current-room facts, never a hypothetical-world ledger. */
+  inspectHorizonIntent() {
+    if (this.busy || this.failure) throw new Error("Intent inspection requires an idle healthy agent");
+    const room = this.player().getRoom(), base = this.inspectHorizonRoom();
+    return { ...base, coverage: "full-current-room", provenance: "live-inspection",
+      objectHeights: room.items.filter(i => !i.pickedUp).map(i => ({ id: i.globalId, z: Number.isFinite(i.z) ? i.z : null })),
+      room: { id: room.globalId, depth: room.depth, pathId: room.pathId,
+        bossRoom: room.type === RoomType.BOSS,
+        progressBlockedByEnemies: room.type === RoomType.BOSS && room.entities.some(e => e.isEnemy && !e.dead) },
+      tiles: base.tiles.map(t => {
+        const tile: any = room.roomArray[t.x]?.[t.y];
+        // Only a directed link to an already entered room is disclosed. No reverse edge
+        // is invented, and an observed link is NOT recorded as an actual traversal.
+        const linked = tile?.linkedDoor?.room ?? tile?.linkedRoom ?? null;
+        return { ...t, hazard: tile?.getAgentHazardTraits?.() ?? null,
+          destination: linked?.entered === true ? { roomId: linked.globalId, depth: linked.depth } : null };
+      }) };
+  }
+
+  /** Presentation opt-in only. Does not enter observations, saves, fingerprints, or RNG. */
+  setHorizonGhostView(enabled: boolean) {
+    if (AGENT_SIMULATION_MODE) throw new Error("Ghost presentation belongs to the visible agent only");
+    (this.game as any).horizonGhostViewEnabled = enabled === true;
+    if (!enabled) (this.game as any).horizonGhostViewFrame = null;
+  }
+  getHorizonGhostView() {
+    const frame = (this.game as any).horizonGhostViewFrame;
+    if (!(this.game as any).horizonGhostViewEnabled || !frame) return null;
+    const player = this.player(), room = player?.getRoom();
+    return { ...frame, matrix: [...frame.matrix], sheet: (this.game.constructor as any).playerset,
+      ageMs: performance.now() - frame.capturedAt,
+      hidden: this.busy || !room || room.globalId !== frame.roomId || player.dead ||
+        player.inventory.isOpen || player.screenMessage.open || player.menu?.open === true,
+      z: player?.z ?? 0, directionRows: {
+        up: Direction.UP * 2, right: Direction.RIGHT * 2,
+        down: Direction.DOWN * 2, left: Direction.LEFT * 2,
+      } };
+  }
+
+
   /** Lightweight read-only geometry for goal selection. It makes NO safety predictions. */
   inspectHorizonRoom() {
     if (this.busy || this.failure) throw new Error("Goal inspection requires an idle healthy agent");

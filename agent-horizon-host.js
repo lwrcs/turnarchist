@@ -96,7 +96,9 @@
     }
   }
   /** Reuse an existing IsolatedSimulator to share its preview mutex and iframe. */
-  function create({ source, simulator, createFrame, stepTimeoutMs = 3000, settlementTimeoutMs = 15000, onOperation } = {}) {
+  function create({ source, simulator, createFrame, stepTimeoutMs = 3000, settlementTimeoutMs = 15000, onOperation, searchDriver } = {}) {
+    // HORIZON_EXPEDITION_DRIVER_V1: opt-in execution only; advisory plan() retains Core.search.
+    if (searchDriver !== undefined && typeof searchDriver !== 'function') throw new TypeError('searchDriver must be a function');
     if (!Core) throw new Error('Load agent-horizon-core.js first');
     if (onOperation !== undefined && typeof onOperation !== 'function') throw new TypeError('onOperation must be a function');
     if (typeof source !== 'function') throw new TypeError('source must return the live window.agent');
@@ -175,15 +177,20 @@
         catch (error) { return failure('INVALID_REQUEST', String(error.message)); }
         const guard = Core.canonical(live.getPlanningGuard()), visible = viewIdentity(liveBefore);
         const unchanged = () => {
+          const checkedAt = onOperation ? monotonic() : 0;
           if (source() !== live || Core.canonical(live.getPlanningGuard()) !== guard || viewIdentity(live.observe()) !== visible) {
             throw new Error('Live game changed during planning; discard this query');
           }
+          if (onOperation) notify({ phase: 'guard-validation', status: 'complete', elapsedMs: monotonic() - checkedAt });
         };
         const state = agent => {
+          const capturedAt = onOperation ? monotonic() : 0;
           const view = clone(agent.observe()), snapshot = clone(agent.capturePlanningSnapshot());
           if (snapshot.schemaVersion !== 3 || snapshot.source !== 'privileged-horizon-snapshot' || typeof snapshot.serialized !== 'string') throw new Error('Unsupported planning snapshot');
           // Conservative identity: NO removal of RNG, counters, metadata, or history.
-          return { view, snapshot, identity: Core.canonical(JSON.parse(snapshot.serialized)) };
+          const identity = Core.canonical(JSON.parse(snapshot.serialized));
+          if (onOperation) notify({ phase: 'snapshot-capture-and-key', status: 'complete', elapsedMs: monotonic() - capturedAt });
+          return { view, snapshot, identity };
         };
         const capabilities = Core.canonical(live.getPlanningCapabilities());
         if (live.getPlanningCapabilities().snapshotSchemaVersion !== 3) throw new Error('PLANNING_BUILD_MISMATCH: rebuild the live game to snapshot v3');
@@ -291,11 +298,18 @@
               const proof = { action: clone(action), afterGuard: Core.canonical(agent.getPlanningGuard()),
                 afterView: viewIdentity(view), healthLoss, turnDelta: result.info.turnDelta };
               const bytes = Core.canonical(proof).length * 2 + 128;
-              if (evidenceBytes + bytes > evidenceBudget) {
+              // A failed route proposal may revisit a root action during fallback.
+              if (firstEdges.has(key) && Core.canonical(firstEdges.get(key)) !== Core.canonical(proof)) {
+                const error = new Error('Repeated root/action produced different continuation evidence');
+                error.code = 'HORIZON_REPEAT_EDGE_DIVERGED'; error.path = '/execution/firstEdge';
+                throw error;
+              }
+              const oldBytes = firstEdges.has(key) ? Core.canonical(firstEdges.get(key)).length * 2 + 128 : 0;
+              if (evidenceBytes - oldBytes + bytes > evidenceBudget) {
                 const error = new Error('First-edge evidence exceeds its reserved memory budget');
                 error.code = 'HORIZON_EVIDENCE_BUDGET'; throw error;
               }
-              firstEdges.set(key, proof); evidenceBytes += bytes;
+              firstEdges.set(key, proof); evidenceBytes += bytes - oldBytes;
             }
             recordCandidate({ ...diagnostic, outcome: result.terminated ? 'terminal' : healthLoss > 0 ? 'unsafe-health-loss' : 'safe-edge',
               to: summary(view).player, healthLoss, recorded: true, turnDelta: result.info.turnDelta,
@@ -324,7 +338,8 @@
           timing.restoreMs += Date.now() - start; unchanged();
         }
         const searchOptions = forExecution ? { ...options, maxBytes: requested.maxBytes - evidenceBudget } : options;
-        const result = await Core.search({ root, adapter, goal, options: searchOptions, signal: own.signal });
+        const searchImplementation = forExecution && searchDriver ? searchDriver : Core.search;
+        const result = await searchImplementation({ root, adapter, goal, options: searchOptions, signal: own.signal });
         unchanged();
         const output = { ...result, assistance: 'privileged-oracle-advisory', goal, timing,
           candidateLedger: clone(candidateLedger), candidateLedgerTruncated: candidateLedger.length >= 128,
@@ -357,5 +372,5 @@
       cancel: () => controller?.abort(),
       dispose: () => { controller?.abort(); simulator.dispose(); } });
   }
-  return { create, validateGoal, viewIdentity, assertViewIdentity, goalReached, actionsFor };
+  return { create, validateGoal, viewIdentity, assertViewIdentity, goalReached, actionsFor, searchDriverVersion: 1 };
 });

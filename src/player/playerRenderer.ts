@@ -265,6 +265,17 @@ export class PlayerRenderer {
     // armor layer. We copy the camera transform so world-coordinate draw calls land at the
     // correct screen-space pixels inside the layer.
     const mainCtx = Game.ctx;
+    // HORIZON_GHOST_PROJECTION_V1: publish the actual world-to-canvas matrix. No
+    // extra Player/render calls, sprite animation, physics updates, or RNG draws.
+    if ((player.game as any).horizonGhostViewEnabled === true) {
+      const matrix = mainCtx.getTransform();
+      (player.game as any).horizonGhostViewFrame = {
+        matrix: [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f],
+        canvas: mainCtx.canvas, tileSize: GameConstants.TILESIZE,
+        roomId: player.getRoom().globalId, depth: player.getRoom().depth,
+        capturedAt: performance.now(),
+      };
+    }
     Game.syncPlayerLayer();
     Game.playerLayerCtx!.setTransform(1, 0, 0, 1, 0, 0);
     Game.playerLayerCtx!.clearRect(0, 0, Game.playerLayer!.width, Game.playerLayer!.height);

@@ -37,3 +37,11 @@ test('cached path invalidation still uses the actual blocked-cell and changed-ta
   assert.equal(r.e.searchPathLocalizedCached(target,blocked)[0].pos.x,17);
  }
 });
+test('planning continuation restores captured enemy tick order after reconstruction',()=>{
+ const P=require(process.env.HORIZON_PATH_CACHE_MODULE),a=fixture(),b=fixture();
+ a.e.globalId='EN-a';b.e.globalId='EN-b';
+ const room={globalId:'R-cache',entities:[a.e,b.e]},saved=P.capturePlanningPaths([room],()=>true);
+ const restored={globalId:'R-cache',entities:[b.e,a.e]};
+ P.restorePlanningPaths(saved,[restored],()=>true);
+ assert.deepEqual(restored.entities.map(e=>e.globalId),['EN-a','EN-b']);
+});

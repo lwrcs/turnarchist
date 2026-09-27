@@ -36957,6 +36957,47 @@ class AgentEnvironment {
         open ? inventory.open() : inventory.close();
     }
     player() { return this.game.players[this.game.localPlayerID]; }
+    /** HORIZON_EXPEDITION_V1: real current-room facts, never a hypothetical-world ledger. */
+    inspectHorizonIntent() {
+        if (this.busy || this.failure)
+            throw new Error("Intent inspection requires an idle healthy agent");
+        const room = this.player().getRoom(), base = this.inspectHorizonRoom();
+        return { ...base, coverage: "full-current-room", provenance: "live-inspection",
+            objectHeights: room.items.filter(i => !i.pickedUp).map(i => ({ id: i.globalId, z: Number.isFinite(i.z) ? i.z : null })),
+            room: { id: room.globalId, depth: room.depth, pathId: room.pathId,
+                bossRoom: room.type === room_1.RoomType.BOSS,
+                progressBlockedByEnemies: room.type === room_1.RoomType.BOSS && room.entities.some(e => e.isEnemy && !e.dead) },
+            tiles: base.tiles.map(t => {
+                const tile = room.roomArray[t.x]?.[t.y];
+                // Only a directed link to an already entered room is disclosed. No reverse edge
+                // is invented, and an observed link is NOT recorded as an actual traversal.
+                const linked = tile?.linkedDoor?.room ?? tile?.linkedRoom ?? null;
+                return { ...t, hazard: tile?.getAgentHazardTraits?.() ?? null,
+                    destination: linked?.entered === true ? { roomId: linked.globalId, depth: linked.depth } : null };
+            }) };
+    }
+    /** Presentation opt-in only. Does not enter observations, saves, fingerprints, or RNG. */
+    setHorizonGhostView(enabled) {
+        if (agentMode_1.AGENT_SIMULATION_MODE)
+            throw new Error("Ghost presentation belongs to the visible agent only");
+        this.game.horizonGhostViewEnabled = enabled === true;
+        if (!enabled)
+            this.game.horizonGhostViewFrame = null;
+    }
+    getHorizonGhostView() {
+        const frame = this.game.horizonGhostViewFrame;
+        if (!this.game.horizonGhostViewEnabled || !frame)
+            return null;
+        const player = this.player(), room = player?.getRoom();
+        return { ...frame, matrix: [...frame.matrix], sheet: this.game.constructor.playerset,
+            ageMs: performance.now() - frame.capturedAt,
+            hidden: this.busy || !room || room.globalId !== frame.roomId || player.dead ||
+                player.inventory.isOpen || player.screenMessage.open || player.menu?.open === true,
+            z: player?.z ?? 0, directionRows: {
+                up: game_1.Direction.UP * 2, right: game_1.Direction.RIGHT * 2,
+                down: game_1.Direction.DOWN * 2, left: game_1.Direction.LEFT * 2,
+            } };
+    }
     /** Lightweight read-only geometry for goal selection. It makes NO safety predictions. */
     inspectHorizonRoom() {
         if (this.busy || this.failure)
@@ -38718,6 +38759,24 @@ function restorePlanningPaths(input, rooms, supported) {
     });
     for (const s of staged)
         s.entity._pathCache = s.cache;
+    // Enemy behavior is order-sensitive: an earlier enemy may move and change the
+    // blockers seen by a later enemy in the same computer turn. Save V2 normally
+    // retains array order, but reconstruction side effects may interleave entities.
+    // Reassert the captured order for this audited enemy set without moving props.
+    const order = new Map(v.entities.map((s, index) => [s.gid, index]));
+    for (const room of rooms) {
+        const slots = [], ordered = [];
+        for (let i = 0; i < room.entities.length; i++) {
+            const entity = room.entities[i];
+            if (order.has(entity.globalId)) {
+                slots.push(i);
+                ordered.push(entity);
+            }
+        }
+        ordered.sort((a, b) => order.get(a.globalId) - order.get(b.globalId));
+        for (let i = 0; i < slots.length; i++)
+            room.entities[slots[i]] = ordered[i];
+    }
 }
 exports.restorePlanningPaths = restorePlanningPaths;
 
@@ -48333,6 +48392,10 @@ const registerBuiltinEnemyCodecsV2 = () => {
             ticks: isEnemy && typeof value.ticks === "number" ? value.ticks : undefined,
             alertTicks: typeof value.alertTicks === "number" ? value.alertTicks : undefined,
             unconscious: value.unconscious === true ? true : undefined,
+            ticksSinceFirstHit: (value instanceof skullEnemy_1.SkullEnemy || value instanceof armoredSkullEnemy_1.ArmoredSkullEnemy || value instanceof bigSkullEnemy_1.BigSkullEnemy) &&
+                Number.isSafeInteger(value.ticksSinceFirstHit) && value.ticksSinceFirstHit >= 0
+                ? value.ticksSinceFirstHit
+                : undefined,
             skipNextTurns: typeof value.skipNextTurns === "number" ? value.skipNextTurns : undefined,
             shield: value.shield ? { health: value.shield.health } : undefined,
             buffed: value.buffed === true ? true : undefined,
@@ -48385,6 +48448,9 @@ const registerBuiltinEnemyCodecsV2 = () => {
             e.alertTicks = value.alertTicks;
         if ("unconscious" in value && typeof value.unconscious === "boolean")
             e.unconscious = value.unconscious;
+        if ((e instanceof skullEnemy_1.SkullEnemy || e instanceof armoredSkullEnemy_1.ArmoredSkullEnemy || e instanceof bigSkullEnemy_1.BigSkullEnemy) &&
+            "ticksSinceFirstHit" in value && typeof value.ticksSinceFirstHit === "number")
+            e.ticksSinceFirstHit = value.ticksSinceFirstHit;
         if ("skipNextTurns" in value && typeof value.skipNextTurns === "number")
             e.skipNextTurns = value.skipNextTurns;
         if ("buffedBefore" in value && typeof value.buffedBefore === "boolean")
@@ -53672,6 +53738,7 @@ const validateEnemySaveV2 = (v, path) => {
     const ticksU = get(v, "ticks");
     const alertTicksU = get(v, "alertTicks");
     const unconsciousU = get(v, "unconscious");
+    const ticksSinceFirstHitU = get(v, "ticksSinceFirstHit");
     const skipNextTurnsU = get(v, "skipNextTurns");
     const shieldU = get(v, "shield");
     const buffedU = get(v, "buffed");
@@ -53728,6 +53795,16 @@ const validateEnemySaveV2 = (v, path) => {
                 path: `${path}.unconscious`,
             });
         unconscious = unconsciousU;
+    }
+    let ticksSinceFirstHit = undefined;
+    if (ticksSinceFirstHitU !== undefined) {
+        if (!Number.isSafeInteger(ticksSinceFirstHitU) || ticksSinceFirstHitU < 0)
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "ticksSinceFirstHit must be a non-negative safe integer if present",
+                path: `${path}.ticksSinceFirstHit`,
+            });
+        ticksSinceFirstHit = ticksSinceFirstHitU;
     }
     let skipNextTurns = undefined;
     if (skipNextTurnsU !== undefined) {
@@ -53967,6 +54044,7 @@ const validateEnemySaveV2 = (v, path) => {
         ticks,
         alertTicks,
         unconscious,
+        ticksSinceFirstHit,
         skipNextTurns,
         shield,
         buffed,
@@ -84643,6 +84721,17 @@ class PlayerRenderer {
             // armor layer. We copy the camera transform so world-coordinate draw calls land at the
             // correct screen-space pixels inside the layer.
             const mainCtx = game_1.Game.ctx;
+            // HORIZON_GHOST_PROJECTION_V1: publish the actual world-to-canvas matrix. No
+            // extra Player/render calls, sprite animation, physics updates, or RNG draws.
+            if (player.game.horizonGhostViewEnabled === true) {
+                const matrix = mainCtx.getTransform();
+                player.game.horizonGhostViewFrame = {
+                    matrix: [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f],
+                    canvas: mainCtx.canvas, tileSize: gameConstants_1.GameConstants.TILESIZE,
+                    roomId: player.getRoom().globalId, depth: player.getRoom().depth,
+                    capturedAt: performance.now(),
+                };
+            }
             game_1.Game.syncPlayerLayer();
             game_1.Game.playerLayerCtx.setTransform(1, 0, 0, 1, 0, 0);
             game_1.Game.playerLayerCtx.clearRect(0, 0, game_1.Game.playerLayer.width, game_1.Game.playerLayer.height);
@@ -102501,7 +102590,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("8f94c80d349eda297cc4")
+/******/ 		__webpack_require__.h = () => ("a5ebe15200a60bd0ccad")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

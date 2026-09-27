@@ -56,4 +56,18 @@ export function restorePlanningPaths(input: unknown, rooms: readonly RoomRef[], 
     return { entity: t!.e, cache: s.cache };
   });
   for (const s of staged) s.entity._pathCache = s.cache;
+  // Enemy behavior is order-sensitive: an earlier enemy may move and change the
+  // blockers seen by a later enemy in the same computer turn. Save V2 normally
+  // retains array order, but reconstruction side effects may interleave entities.
+  // Reassert the captured order for this audited enemy set without moving props.
+  const order = new Map(v.entities.map((s: any, index: number) => [s.gid, index]));
+  for (const room of rooms) {
+    const slots: number[] = [], ordered: any[] = [];
+    for (let i = 0; i < room.entities.length; i++) {
+      const entity = room.entities[i];
+      if (order.has(entity.globalId)) { slots.push(i); ordered.push(entity); }
+    }
+    ordered.sort((a, b) => (order.get(a.globalId) as number) - (order.get(b.globalId) as number));
+    for (let i = 0; i < slots.length; i++) room.entities[slots[i]] = ordered[i];
+  }
 }

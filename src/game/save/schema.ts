@@ -427,6 +427,8 @@ export type BasicEnemySaveV2 = EnemySaveEnvelopeV2 & {
   ticks?: number;
   alertTicks?: number;
   unconscious?: boolean;
+  /** Skull-family regeneration progress while unconscious. */
+  ticksSinceFirstHit?: number;
   skipNextTurns?: number;
   shield?: { health: number };
   buffed?: boolean;
@@ -984,5 +986,3 @@ export const ITEM_KIND_VALUES_V2 = [
 export type ItemKind = (typeof ITEM_KIND_VALUES_V2)[number];
 
 export type ProjectileKind = "wizard_fireball" | "big_wizard_fireball" | "enemy_spawn_animation" | "player_fireball";
-
-
