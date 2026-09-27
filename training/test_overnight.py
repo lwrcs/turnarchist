@@ -50,9 +50,12 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(result['rounds'],[])
 
     def test_low_disk_stops_and_preserves_reference(self):
+        from pathlib import Path
         result=self.run_guard(7200,0)
         self.assertEqual(result['status'],'stopped')
-        self.assertTrue(result['selectedModel'].endswith('navigation-model-001/final.zip'))
+        selected=Path(result['selectedModel'])
+        self.assertEqual(selected.name,'final.zip')
+        self.assertEqual(selected.parent.name,'navigation-model-001')
 
 class AdaptiveTests(unittest.TestCase):
     def test_regression_rolls_back_with_smaller_updates(self):

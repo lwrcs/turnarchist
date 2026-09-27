@@ -1,0 +1,50 @@
+# Turnarchist engineering stabilization
+
+This is the working task list for the [engineering audit](https://chatgpt.com/c/6ab952a6-a0d0-83ea-8164-59091336f800). Keep the playable game and browser-backed agent training behavior intact while making future changes easier to verify. A passing unit suite is not proof of live-game or training parity.
+
+## Evidence baseline (2026-09-27)
+
+- Starting checkout: `master` at `7ab7de52`, with four pre-existing uncommitted cleanup edits. Its root Node suite passed **214/214** on pinned Node `22.23.2` after the door-fixture repair. It has not been rebased or changed for a build; a watcher or training process may still use it.
+- Isolated worktree: `codex/engineering-stabilization` from `origin/master` at `9a475b4a`, the revision inspected by the audit. The Mac's later Horizon handoff work remains separate. Every result below applies to this isolated worktree and its uncommitted changes, not to the Mac branch or a deployed release.
+- A clean `npm ci` with the lockfile's TypeScript `4.9.5` exposed Zod declaration syntax it cannot parse. After trialing TypeScript `5.9.3`, full typecheck identified an invalid `super.toggleEquip()` call in `Pickaxe` (the parent method is an instance field). A narrow fix preserves the default tool-only behavior and delegates to the captured weapon equip action when that setting is disabled. The one-case regression verifies both branches.
+- With TypeScript `5.9.3` pinned in the lockfile, a **fresh `npm ci`** on Node `22.23.2` succeeded. Full `tsc --noEmit` passed. An isolated Webpack production build passed with three size/performance warnings.
+- Root Node tests passed **215/215** after reproducing and fixing 29 import-map failures in the old agent-environment fixture. The separate Horizon Node runner passed **294/294**. Neither suite proves live browser continuation.
+- In the documented WSL virtualenv, the root Python suite initially had three missing-fixture-field errors and then passed **106/106** after fixture corrections; Horizon Python passed **23/23**. Ordinary Windows Python is not the training environment and produced different failures.
+- The overnight controller's Windows path assertion was reproduced and repaired. The isolated production bundle was then served from the worktree: the game rendered its first floor, required game assets returned HTTP 200, and the agent lab reset seed 123 with observation/action schemas 10/5. One right action was recorded with turn delta 1, turn count 1, and a changed player position. A browser log also contained an uncaught `MutationObserver.observe` type error without a source URL; no repository source contains `MutationObserver`, so its origin remains unverified. The browser still completed the action. This is a startup/action smoke, not continuation parity.
+- No Electron package, full browser continuation run, or model-training run has been performed here. Do not write into an active watcher's `dist/` output.
+
+## P0 — establish trustworthy checks and current documentation
+
+- [x] Capture the local revision, runtime, suite results, and known execution gaps above.
+- [x] Repair the root door-test fixture's required game/player collaborators; rerun the entire root Node suite (214/214 on pinned Node 22).
+- [x] Replace the overnight controller test's platform-specific path suffix assertion; reproduce its failure first, then rerun the targeted test successfully.
+- [x] Bring the local cleanup edits into an isolated worktree at `origin/master` and record its own results. Keep the Mac handoff separate until it has its own verified integration.
+- [x] Reproduce the older agent-environment fixture's missing-import failures on the newer revision; repair its explicit import map without changing the production module. Rerun root Node (215/215) and dedicated Horizon Node (294/294).
+- [x] Run root Python and Horizon Python in the documented WSL virtualenv. Correct only the three fixture omissions, then rerun (106/106 and 23/23).
+- [ ] Integrate and verify the Mac Horizon handoff after its final source state is available; do not equate its fixture pass count with live-run certification.
+- [x] Provide explicit, discoverable commands for root Node, Horizon Node, root Python, Horizon Python, and full typecheck. The new npm entry points passed on pinned Node 22; the Horizon runner retains its setup and output isolation.
+- [x] Correct README, CLAUDE, and the current front section of agent-training documentation for this revision. Label the level-system investigation as historical while retaining its content.
+- [x] Audit `.gitignore` against observed generated data and deployment consumers. Add only virtualenv/Python/test cache and npm debug-log patterns; keep tracked `dist/` and the separate Seclunion preview.
+- [x] Verify the isolated production build as a served page: game first-floor rendering, asset responses, and one agent-lab action succeeded. Keep the unexplained browser `MutationObserver` log entry noted above for follow-up.
+
+## P1 — reproducible releases and targeted behavior checks
+
+- [ ] Create an immutable staged web artifact with source revision, dirty-state identity, bundle hash, unbundled script hashes, authored-map hashes, and effective settings. Verify the manifest against the staged bytes.
+- [ ] Make the root package version the authority for the displayed game release; derive the UI and wrapper's embedded-game identity from it. Keep save, replay, generation, observation/action, planning, and model versions independent and migration-aware.
+- [ ] Add a few independent real-browser continuation fixtures: visible versus hidden simulation, door/ladder traversal, effect completion, save/restore next action, restricted perception, and retained replay. Compare exact turn, RNG, room/path, and relevant state; report the first field-level divergence.
+- [ ] Reproduce and narrowly fix `clearFloorForBigEnemy` removing entities that share only a row or column with its target. Test those independent cases and compare a fixed seed before and after as an intentional gameplay change.
+- [ ] Bound the outer dungeon-generation retry path while preserving the successful path's RNG order. On failure, report seed, route, parameters, and last validation reason.
+- [ ] Add independent graph, tile, and key/gate reachability checks for shipped authored maps and a fixed seed corpus. Record failures without silently changing generated worlds.
+- [ ] Validate web cache updates, offline reopening, Electron `file://` asset loading, and save-path containment/atomic recovery with staged builds.
+- [ ] Inventory and run each separate package's safe checks: Electron staging and Windows launch/package smoke, metrics typecheck/build/lint, and server/bot startup checks with their own dependencies. Do not invoke database migrations, external services, signing, or Mac packaging as an accidental side effect of the root build.
+
+## P2 — organization and toolchain, after behavior gates
+
+- [ ] Document authoritative ownership of level, room, active-room, path, and transition state; clarify misleading names incrementally without renaming persisted keys.
+- [ ] Extract a pure, typed zombie sprite selector while retaining animation timing, blitting, shading, and existing armored-zombie appearance. Verify exact atlas rectangles and browser visuals.
+- [ ] Instrument population passes on fixed seeds before changing their order or RNG use; use traces to simplify only a feature's touched seam.
+- [ ] Use a small paired-seed playtest to assess damage clarity, zero-turn bookkeeping, sidepath travel cost, and progression confusion; keep observed player feedback separate from code-only guesses about fun.
+- [ ] Finish evaluating the pinned TypeScript 5.9.3 candidate against Electron and other package paths; clean install, full typecheck, root/Horizon Node suites, WSL Python suites, Webpack production build, and a served browser startup/action smoke pass. Assess Node upgrades separately later.
+- [ ] Consider Vite only if a measured workflow problem remains after release staging and test entry points. Keep Webpack as the reference until output and gameplay parity are demonstrated.
+
+Update a checkbox only when its stated checks have run on the named revision. Record failed checks instead of adding assertions that merely mirror implementation.

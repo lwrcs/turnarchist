@@ -203,6 +203,7 @@ class DungeonTests(unittest.TestCase):
             env.steps=env.total_reward=env.game_actions=env.assisted_actions=env.world_turns=env.health_lost=0
             env.rejected_actions=env.consecutive_rejected=env.max_consecutive_rejected=0
             env.navigator_actions=0
+            env.viewer_dir=None; env.viewer_actions=[]
             env.stop_reason=None; env.started=0; env.phase='test'; env.game_seed=1; env.episode_seed=2
             calls=[]
             class Page:

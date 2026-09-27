@@ -18,6 +18,15 @@ function load(file, dependencies) {
 function setup(timeoutMs = 500, {simulation = false} = {}) {
   class DownLadder {}
   class UpLadder {}
+  class PlanningDataError extends Error {}
+  class HitWarning {}
+  class FishingSpot {}
+  class Enemy {}
+  class Spawner {}
+  class BombItem {}
+  const planningOnly = () => { throw new Error('Unexpected planning continuation in agent environment fixture'); };
+  const idGenerator = load('src/globalStateManager/IdGenerator.ts', {});
+  const planning = load('src/game/agentPlanning.ts', {'../globalStateManager/IdGenerator': idGenerator});
   const {AgentEnvironment} = load('src/game/agentEnvironment.ts', {
     './agentMemory': load('src/game/agentMemory.ts', {}),
     './agentMode': {AGENT_SIMULATION_MODE: simulation, setAgentFastMode() {}},
@@ -36,6 +45,25 @@ function setup(timeoutMs = 500, {simulation = false} = {}) {
     './save/simulationSnapshot': {createSimulationSnapshot(game) { return {ok:true, value:{serialized: JSON.stringify({worldSpec:{seed: game.seed, rngState: 1}})}};}},
     './save/loadV2': {loadSaveV2: async (game, save) => { game.loadedSimulationSnapshot = save; return {ok:true, value:undefined}; }},
     './save/validate': {parseSaveV2Json(raw) { return {ok:true, value:JSON.parse(raw)};}},
+    './save/fingerprint': {captureFingerprint: planningOnly},
+    './save/writeV2': {collectRoomsForSaveAtCurrentDepth: planningOnly},
+    '../drawable/hitWarning': {HitWarning},
+    './agentPlanningWarnings': {captureWarningContinuation: planningOnly, restoreWarningContinuation: planningOnly},
+    './agentPlanningInteraction': {capturePlanningInteraction: planningOnly, restorePlanningInteraction: planningOnly},
+    './agentPlanningPaths': {capturePlanningPaths: planningOnly, restorePlanningPaths: planningOnly},
+    './agentPlanningEmptyLoot': {capturePlanningEmptyLoot: planningOnly, restorePlanningEmptyLoot: planningOnly},
+    './agentPlanningAttachedLoot': {capturePlanningAttachedLoot: planningOnly, restorePlanningAttachedLoot: planningOnly},
+    './agentPlanningResources': {capturePlanningResources: planningOnly, restorePlanningResources: planningOnly},
+    './agentPlanningSpawners': {capturePlanningSpawners: planningOnly, restorePlanningSpawners: planningOnly},
+    '../entity/object/fishingSpot': {FishingSpot},
+    '../entity/enemy/enemy': {Enemy},
+    '../entity/enemy/spawner': {Spawner},
+    './agentPlanning': {...planning, PlanningDataError},
+    '../globalStateManager/IdGenerator': idGenerator,
+    '../utility/random': {Random: {setState: planningOnly}},
+    './save/registry/itemsBuiltins': {getItemKindV2: planningOnly, registerBuiltinItemCodecsV2: planningOnly},
+    './save/registry/items': {itemRegistryV2: {get: planningOnly}},
+    '../item/bombItem': {BombItem},
   });
   const actions = [];
   const room = {globalId: 'room', roomX: 0, roomY: 0, width: 3, height: 3,

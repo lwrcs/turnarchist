@@ -1,5 +1,7 @@
 ## Task list
 
+The active engineering-stabilization checklist and evidence baseline are in [engineering-stabilization-2026-09-27.md](engineering-stabilization-2026-09-27.md). This page remains the broader gameplay and idea backlog.
+
 ### Using this doc
 
 - **Goal**: a single task list that can hold anything (bugs, refactors, “rework X”, research, chores).

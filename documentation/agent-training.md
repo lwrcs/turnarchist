@@ -1,11 +1,16 @@
 # Playtesting agent and training
 
-Current action schema is **4**: unrestricted `Wait` is not a player action and
+The current diagnostic agent contract is **observation schema 10, action schema 5**
+(`src/game/agentContract.ts`). The learned pilot still uses only four directional
+actions. Unrestricted `Wait` is not a player action and
 is rejected. Earlier Wait examples below are historical descriptions of the
 retired interface. Live stalling requires actual gameplay, such as breaking an
-object or using the limited-charge hourglass through `UseItem`. The learned
-pilot currently has four directional actions only. See `player-legal-actions.md`
+object or using the limited-charge hourglass through `UseItem`. See `player-legal-actions.md`
 for the correction, audit and checkpoint compatibility boundary.
+
+This document also retains implementation history. Later schema-numbered examples
+describe the interface at the time they were written; use the current contract
+and `training/README.md` for present-day training compatibility.
 
 Development starts on the macOS laptop. Larger simulation batches and training
 will run on the Windows 10 desktop (12700K, 32 GB RAM, RTX 3080 Ti). WSL and the

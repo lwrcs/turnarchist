@@ -92,6 +92,7 @@ class EvaluationTests(unittest.TestCase):
         env.frames=deque(maxlen=2)
         env.contract=None
         env.budget=64
+        env.viewer_dir=None
         view=EncodingTests().view()
         view['contract']={'actionSchemaVersion':5}
         env.page=Mock()
@@ -151,6 +152,7 @@ class EvaluationTests(unittest.TestCase):
             env.trace=[]
             env.steps=0
             env.total_reward=0
+            env.viewer_dir=None
             class Page:
                 def evaluate(self,script,action):
                     return {'view':copy.deepcopy(view),'terminated':False,'truncated':False,

@@ -1,9 +1,14 @@
 **/node_modules
 js/*
 **/.DS_Store
-# keep this pointing to heroku in the github
+# Local server endpoint override
 src/serverAddress.ts
 .env
 .env.*
+**/.venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+npm-debug.log*
 .teaching-local.json
 training/data/teaching/*.json

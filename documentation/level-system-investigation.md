@@ -1,5 +1,11 @@
 # Level System Investigation
 
+Historical investigation: its claim that progression has no central authority
+predates `src/level/levelProgressionConfig.ts`. Current sidepath selection is
+partly centralized there; physical placement, population pass ordering, and
+tile-level navigability still require separate checks. Read the findings below
+as design history, not as an up-to-date map of every generation route.
+
 An audit of how level generation, room population, environment configuration, and sidepath logic are organized (or scattered) across the codebase. The goal is to identify where there is no single source of truth, where configuration is duplicated, and what needs consolidation before adding new features.
 
 ---

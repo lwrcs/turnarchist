@@ -10,6 +10,13 @@ export class Pickaxe extends Weapon {
   static itemName = "pickaxe";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
+    // Weapon installs toggleEquip as an instance field, so capture it before
+    // applying the tool-only rule. It is not callable through super.
+    const toggleWeaponEquip = this.toggleEquip;
+    this.toggleEquip = () => {
+      if (GameplaySettings.PICKAXE_AS_TOOL) return;
+      toggleWeaponEquip();
+    };
     this.tileX = 30;
     this.tileY = 0;
     this.name = Pickaxe.itemName;
@@ -18,8 +25,4 @@ export class Pickaxe extends Weapon {
     this.canReceiveStatusEffect = false;
   }
 
-  toggleEquip = () => {
-    if (GameplaySettings.PICKAXE_AS_TOOL) return;
-    super.toggleEquip();
-  };
 }

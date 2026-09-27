@@ -4,13 +4,14 @@ function compile(code,globals={}){const context={exports:{},console:{warn(){}},.
 const {findDoorwayOccupant}=compile(fs.readFileSync('src/tile/doorTraversal.ts','utf8'));
 function methods(file,names,globals){const s=ts.createSourceFile(file,fs.readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true);const c=s.statements.find(n=>ts.isClassDeclaration(n)&&n.members.some(m=>m.name?.getText(s)===names[0]));return compile('export class Fixture {'+c.members.filter(m=>names.includes(m.name?.getText(s))).map(m=>m.getText(s)).join('\n')+'}',globals).Fixture;}
 const Direction={UP:0,DOWN:1,LEFT:2,RIGHT:3},DoorType={DOOR:0,LOCKEDDOOR:1,GUARDEDDOOR:2,TUNNELDOOR:3};
-const Door=methods('src/tile/door.ts',['getArrivalPosition','getTraversalTraits','canTraverse','canUnlock','onCollide'],{findDoorwayOccupant,Direction,DoorType});
+const Door=methods('src/tile/door.ts',['getArrivalPosition','getTraversalTraits','canTraverse','canUnlock','onCollide'],{findDoorwayOccupant,Direction,DoorType,GameConstants:{DEVELOPER_MODE:false}});
 function doors(){const source=new Door(),target=new Door();
  const a={globalId:'a',roomX:0,entities:[],level:{exitRoom:{}}},b={globalId:'b',roomX:10,entities:[],level:{exitRoom:{}}};
- const game={pushMessage(){}};
+ const player={x:3,y:5,z:0,w:1,h:1};
+ const game={players:{local:player},localPlayerID:'local',pushMessage(){}};
  Object.assign(source,{room:a,game,x:4,y:5,z:0,doorDir:Direction.RIGHT,linkedDoor:target,opened:false});
  Object.assign(target,{room:b,game,x:10,y:5,z:0,doorDir:Direction.LEFT,linkedDoor:source,opened:false});
- return {source,target,a,b,player:{x:3,y:5,z:0,w:1,h:1}};
+ return {source,target,a,b,player};
 }
 test('door traversal rejects occupied source, linked doorway and arrival before opening',()=>{
  for(const where of ['source','linked','arrival']){

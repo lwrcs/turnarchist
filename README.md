@@ -1,14 +1,32 @@
-# witch-roguelike
+# Turnarchist
 
-## Install
+A turn-based roguelike for the browser, with a Canvas renderer and a browser-backed agent simulation and training interface. The browser game is bundled with Webpack; the Electron wrapper under `electron/` packages it for Windows and macOS.
 
-build and watch for changes
+## Local play
 
-```
-npm i
+Use the Node version in `.node-version` (also constrained by `package.json`). From the repository root:
+
+```sh
+npm ci
 npm run watch
+python training/local_server.py
 ```
 
-Start web server
+Open `http://127.0.0.1:8000/play.html`. The local server also supports saving teaching recordings from `teach.html`. Run the server and watcher in separate terminals. If a watcher is already running, reuse it rather than starting another process that writes `dist/`.
 
-`python3 training/local_server.py`
+## Checks
+
+```sh
+npm run typecheck
+npm test
+npm run test:horizon
+```
+
+The Python training tools use the separate environment described in `training/README.md`. In that environment, run the root and Horizon Python suites separately:
+
+```sh
+python -m unittest discover -s training -p 'test_*.py'
+python -m unittest discover -s training/tests -p 'horizon*_tests.py'
+```
+
+These focused suites do not replace a real-browser game check. See `electron/README.md` for desktop packaging and `documentation/agent-training.md` for agent compatibility. The current engineering checklist and validated results are in `documentation/engineering-stabilization-2026-09-27.md`.

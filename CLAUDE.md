@@ -8,12 +8,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm i              # Install dependencies
 npm run watch      # Build + watch (webpack dev mode, runs continuously)
 npm run build      # Production build
+npm run typecheck  # TypeScript source and declaration check
+npm test           # Node tests in tests/*.test.cjs
+npm run test:horizon # Dedicated Horizon Node runner
 npm run dev        # Start http-server on port 8080
 ```
 
-**Do not run `npm run build` manually** — a `watch` process is always running and rebuilds automatically. Serve locally with `python3 training/local_server.py`; this keeps teaching-recording saves inside `training/data/teaching`.
+Check whether a `watch` process is already writing `dist/` before starting another build. Serve locally with `python3 training/local_server.py`; this supports teaching-recording saves inside `training/data/teaching`.
 
-There are no automated tests.
+The root and Horizon Node suites have separate runners. In the training environment described in `training/README.md`, run root Python tests with `python -m unittest discover -s training -p 'test_*.py'` and Horizon Python tests with `python -m unittest discover -s training/tests -p 'horizon*_tests.py'`. These checks do not certify a browser rollout. See `documentation/engineering-stabilization-2026-09-27.md` for the current evidence baseline.
 
 ## Architecture
 

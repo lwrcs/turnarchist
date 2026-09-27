@@ -10573,7 +10573,7 @@ var EnvType;
     EnvType[EnvType["SEWER"] = 12] = "SEWER";
     EnvType[EnvType["CAVE_POCKET"] = 13] = "CAVE_POCKET";
     EnvType[EnvType["DARK_FOREST"] = 14] = "DARK_FOREST";
-})(EnvType = exports.EnvType || (exports.EnvType = {}));
+})(EnvType || (exports.EnvType = EnvType = {}));
 const getEnvTypeName = (envType) => {
     switch (envType) {
         case EnvType.DUNGEON:
@@ -10902,7 +10902,7 @@ var HitWarningDirection;
     HitWarningDirection[HitWarningDirection["West"] = 6] = "West";
     HitWarningDirection[HitWarningDirection["NorthWest"] = 7] = "NorthWest";
     HitWarningDirection[HitWarningDirection["Center"] = 8] = "Center";
-})(HitWarningDirection = exports.HitWarningDirection || (exports.HitWarningDirection = {}));
+})(HitWarningDirection || (exports.HitWarningDirection = HitWarningDirection = {}));
 class HitWarning extends drawable_1.Drawable {
     constructor(game, x, y, eX, eY, isEnemy, dirOnly = false, parent = null) {
         super();
@@ -11215,13 +11215,12 @@ exports.Shadow = Shadow;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isWarningVisibleAboveShade = void 0;
+exports.isWarningVisibleAboveShade = isWarningVisibleAboveShade;
 /** Mirrors the above-shading arrow/X presentation, independent of tile light. */
 function isWarningVisibleAboveShade(warning, playerX, playerY) {
     return warning.hostile || (!warning.directionOnly &&
         Math.hypot(warning.x - playerX, warning.y - playerY) < 1.999);
 }
-exports.isWarningVisibleAboveShade = isWarningVisibleAboveShade;
 
 
 /***/ }),
@@ -15309,7 +15308,7 @@ var ChargeEnemyState;
     ChargeEnemyState[ChargeEnemyState["IDLE"] = 0] = "IDLE";
     ChargeEnemyState[ChargeEnemyState["ALERTED"] = 1] = "ALERTED";
     ChargeEnemyState[ChargeEnemyState["CHARGING"] = 2] = "CHARGING";
-})(ChargeEnemyState = exports.ChargeEnemyState || (exports.ChargeEnemyState = {}));
+})(ChargeEnemyState || (exports.ChargeEnemyState = ChargeEnemyState = {}));
 class ChargeEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -16850,7 +16849,7 @@ var WizardState;
     WizardState[WizardState["attack"] = 1] = "attack";
     WizardState[WizardState["justAttacked"] = 2] = "justAttacked";
     WizardState[WizardState["teleport"] = 3] = "teleport";
-})(WizardState = exports.WizardState || (exports.WizardState = {}));
+})(WizardState || (exports.WizardState = WizardState = {}));
 class EarthWizardEnemy extends wizardEnemy_1.WizardEnemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -18621,7 +18620,7 @@ var WizardState;
     WizardState[WizardState["attack"] = 1] = "attack";
     WizardState[WizardState["justAttacked"] = 2] = "justAttacked";
     WizardState[WizardState["teleport"] = 3] = "teleport";
-})(WizardState = exports.WizardState || (exports.WizardState = {}));
+})(WizardState || (exports.WizardState = WizardState = {}));
 class EnergyWizardEnemy extends wizardEnemy_1.WizardEnemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -19009,7 +19008,7 @@ var WizardState;
     WizardState[WizardState["attack"] = 1] = "attack";
     WizardState[WizardState["justAttacked"] = 2] = "justAttacked";
     WizardState[WizardState["teleport"] = 3] = "teleport";
-})(WizardState = exports.WizardState || (exports.WizardState = {}));
+})(WizardState || (exports.WizardState = WizardState = {}));
 class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -23775,7 +23774,7 @@ var WizardState;
     WizardState[WizardState["attack"] = 1] = "attack";
     WizardState[WizardState["justAttacked"] = 2] = "justAttacked";
     WizardState[WizardState["teleport"] = 3] = "teleport";
-})(WizardState = exports.WizardState || (exports.WizardState = {}));
+})(WizardState || (exports.WizardState = WizardState = {}));
 class WizardEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -24346,7 +24345,7 @@ var EntityDirection;
     EntityDirection[EntityDirection["UP"] = 1] = "UP";
     EntityDirection[EntityDirection["RIGHT"] = 2] = "RIGHT";
     EntityDirection[EntityDirection["LEFT"] = 3] = "LEFT";
-})(EntityDirection = exports.EntityDirection || (exports.EntityDirection = {}));
+})(EntityDirection || (exports.EntityDirection = EntityDirection = {}));
 var EntityType;
 (function (EntityType) {
     EntityType[EntityType["ENEMY"] = 0] = "ENEMY";
@@ -24354,7 +24353,7 @@ var EntityType;
     EntityType[EntityType["RESOURCE"] = 2] = "RESOURCE";
     EntityType[EntityType["PROP"] = 3] = "PROP";
     EntityType[EntityType["CHEST"] = 4] = "CHEST";
-})(EntityType = exports.EntityType || (exports.EntityType = {}));
+})(EntityType || (exports.EntityType = EntityType = {}));
 class Entity extends drawable_1.Drawable {
     constructor(room, game, x, y, z = 0) {
         super();
@@ -30584,7 +30583,7 @@ var LevelState;
     LevelState[LevelState["TRANSITIONING"] = 1] = "TRANSITIONING";
     LevelState[LevelState["TRANSITIONING_LADDER"] = 2] = "TRANSITIONING_LADDER";
     LevelState[LevelState["LEVEL_GENERATION"] = 3] = "LEVEL_GENERATION";
-})(LevelState = exports.LevelState || (exports.LevelState = {}));
+})(LevelState || (exports.LevelState = LevelState = {}));
 var Direction;
 (function (Direction) {
     Direction[Direction["DOWN"] = 0] = "DOWN";
@@ -30596,7 +30595,7 @@ var Direction;
     Direction[Direction["UP_RIGHT"] = 6] = "UP_RIGHT";
     Direction[Direction["DOWN_LEFT"] = 7] = "DOWN_LEFT";
     Direction[Direction["CENTER"] = 8] = "CENTER";
-})(Direction = exports.Direction || (exports.Direction = {}));
+})(Direction || (exports.Direction = Direction = {}));
 class ChatMessage {
     constructor(message) {
         this.cachedLines = null;
@@ -36556,7 +36555,7 @@ exports.gs = new gameState_1.GameState();
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isActionReady = void 0;
+exports.isActionReady = isActionReady;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 /** Live actions and playback must use the same level-transition boundary. */
 function isActionReady(game) {
@@ -36566,7 +36565,6 @@ function isActionReady(game) {
         !state.preLevelGenFadeActive && !state.preLevelGenHoldBlack &&
         !state.preLevelGenActionStarted && !game.transitioningLadder;
 }
-exports.isActionReady = isActionReady;
 
 
 /***/ }),
@@ -36580,7 +36578,8 @@ exports.isActionReady = isActionReady;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.checkAgentCompatibility = exports.getAgentContract = void 0;
+exports.getAgentContract = getAgentContract;
+exports.checkAgentCompatibility = checkAgentCompatibility;
 const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/gameConstants.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
 function getAgentContract() {
@@ -36598,7 +36597,6 @@ function getAgentContract() {
         }).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)),
     };
 }
-exports.getAgentContract = getAgentContract;
 /** Metadata check for future checkpoint loaders. Matching metadata is not a skill test. */
 function checkAgentCompatibility(trainedOn) {
     const current = getAgentContract();
@@ -36612,7 +36610,6 @@ function checkAgentCompatibility(trainedOn) {
         requiresEvaluation: !schemaCompatible || !sameBuild || !sameSettings,
         current };
 }
-exports.checkAgentCompatibility = checkAgentCompatibility;
 
 
 /***/ }),
@@ -37950,7 +37947,8 @@ exports.AgentMemory = AgentMemory;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.setAgentFastMode = exports.AGENT_FAST_MODE = exports.AGENT_SIMULATION_MODE = exports.AGENT_MODE = void 0;
+exports.AGENT_FAST_MODE = exports.AGENT_SIMULATION_MODE = exports.AGENT_MODE = void 0;
+exports.setAgentFastMode = setAgentFastMode;
 /** Opt-in at page load; ordinary play keeps its existing behavior. */
 exports.AGENT_MODE = typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("agent") === "1";
@@ -37959,7 +37957,6 @@ exports.AGENT_SIMULATION_MODE = exports.AGENT_MODE &&
     new URLSearchParams(window.location.search).get("simulator") === "1";
 exports.AGENT_FAST_MODE = false;
 function setAgentFastMode(enabled) { exports.AGENT_FAST_MODE = exports.AGENT_MODE && enabled; }
-exports.setAgentFastMode = setAgentFastMode;
 // A dedicated agent tab accepts actions through its API, not concurrent DOM input.
 if (exports.AGENT_MODE) {
     for (const event of ["keydown", "keyup", "mousedown", "mouseup", "mousemove",
@@ -37980,7 +37977,10 @@ if (exports.AGENT_MODE) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.perceiveRoom = exports.hasTileSight = exports.validateAgentVision = exports.DEFAULT_AGENT_VISION = void 0;
+exports.DEFAULT_AGENT_VISION = void 0;
+exports.validateAgentVision = validateAgentVision;
+exports.hasTileSight = hasTileSight;
+exports.perceiveRoom = perceiveRoom;
 const warningVisibility_1 = __webpack_require__(/*! ../drawable/warningVisibility */ "./src/drawable/warningVisibility.ts");
 exports.DEFAULT_AGENT_VISION = Object.freeze({ range: 12, identificationBrightness: 0.04 });
 function validateAgentVision(vision) {
@@ -37990,7 +37990,6 @@ function validateAgentVision(vision) {
         throw new Error("Invalid vision range or identification brightness");
     return { range: vision.range, identificationBrightness: vision.identificationBrightness };
 }
-exports.validateAgentVision = validateAgentVision;
 /** Supercover sight between tile centers. A blocked corner cannot reveal its diagonal. */
 function hasTileSight(x, y, tx, ty, blocked) {
     const dx = tx - x, dy = ty - y, nx = Math.abs(dx), ny = Math.abs(dy);
@@ -38021,7 +38020,6 @@ function hasTileSight(x, y, tx, ty, blocked) {
     }
     return true;
 }
-exports.hasTileSight = hasTileSight;
 function perceiveRoom(input, vision) {
     const { player } = input;
     const inSight = (x, y) => x !== null && y !== null && Number.isFinite(x) && Number.isFinite(y) &&
@@ -38057,7 +38055,6 @@ function perceiveRoom(input, vision) {
             ...(w.sourceId && identifiedIds.has(w.sourceId) ? { sourceId: w.sourceId } : {}) })),
     };
 }
-exports.perceiveRoom = perceiveRoom;
 
 
 /***/ }),
@@ -38071,7 +38068,14 @@ exports.perceiveRoom = perceiveRoom;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.withGrossHealthLoss = exports.parsePlanningEnvelope = exports.serializePlanningEnvelope = exports.assertPlanningEqual = exports.planningJson = exports.planningDecode = exports.planningEncode = exports.PlanningDataError = exports.PLANNING_RECONSTRUCTION_FORMAT = exports.PLANNING_CAPABILITIES = exports.HEALTH_METRIC = exports.PLANNING_CODEC = exports.PLANNING_FORMAT = void 0;
+exports.PlanningDataError = exports.PLANNING_RECONSTRUCTION_FORMAT = exports.PLANNING_CAPABILITIES = exports.HEALTH_METRIC = exports.PLANNING_CODEC = exports.PLANNING_FORMAT = void 0;
+exports.planningEncode = planningEncode;
+exports.planningDecode = planningDecode;
+exports.planningJson = planningJson;
+exports.assertPlanningEqual = assertPlanningEqual;
+exports.serializePlanningEnvelope = serializePlanningEnvelope;
+exports.parsePlanningEnvelope = parsePlanningEnvelope;
+exports.withGrossHealthLoss = withGrossHealthLoss;
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 /** Privileged planning DTO support. Never changes gameplay or the Save V2 codec. */
 exports.PLANNING_FORMAT = "turnarchist-planning-snapshot-v3";
@@ -38179,7 +38183,6 @@ function planningEncode(value, rootPath = "") {
     }
     return visit(value, rootPath, 0);
 }
-exports.planningEncode = planningEncode;
 function planningDecode(encoded) {
     let nodes = 0;
     function visit(item, path, depth) {
@@ -38237,9 +38240,7 @@ function planningDecode(encoded) {
     }
     return visit(encoded, "", 0);
 }
-exports.planningDecode = planningDecode;
 function planningJson(value) { return JSON.stringify(planningEncode(value)); }
-exports.planningJson = planningJson;
 function describe(value) {
     if (value === undefined)
         return "undefined";
@@ -38272,7 +38273,6 @@ function assertPlanningEqual(expected, actual, code, rootPath) {
     compare(expected, actual, rootPath);
     mismatch(rootPath, expected, actual);
 }
-exports.assertPlanningEqual = assertPlanningEqual;
 function validateEnvelope(value) {
     const envelope = value, runtime = envelope?.runtime, inner = envelope?.inner;
     if (envelope?.format !== exports.PLANNING_FORMAT || !runtime || !inner || inner.schemaVersion !== 1 ||
@@ -38348,7 +38348,6 @@ function serializePlanningEnvelope(value) {
         throw new PlanningDataError("PLANNING_SNAPSHOT_SIZE", "/", "Snapshot exceeds 24,000,000 characters");
     return result;
 }
-exports.serializePlanningEnvelope = serializePlanningEnvelope;
 function parsePlanningEnvelope(serialized) {
     if (typeof serialized !== "string" || !serialized.length || serialized.length > MAX_TEXT) {
         throw new PlanningDataError("PLANNING_SNAPSHOT_SIZE", "/", "Invalid planning snapshot size");
@@ -38367,7 +38366,6 @@ function parsePlanningEnvelope(serialized) {
     validateEnvelope(value);
     return value;
 }
-exports.parsePlanningEnvelope = parsePlanningEnvelope;
 /** Count every downward HP assignment in the disposable simulator, not just net HP. */
 async function withGrossHealthLoss(subject, operation) {
     const descriptor = Object.getOwnPropertyDescriptor(subject, "health");
@@ -38399,7 +38397,6 @@ async function withGrossHealthLoss(subject, operation) {
         Object.defineProperty(subject, "health", { ...descriptor, value: finalHealth });
     }
 }
-exports.withGrossHealthLoss = withGrossHealthLoss;
 
 
 /***/ }),
@@ -38413,7 +38410,8 @@ exports.withGrossHealthLoss = withGrossHealthLoss;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.restorePlanningAttachedLoot = exports.capturePlanningAttachedLoot = void 0;
+exports.capturePlanningAttachedLoot = capturePlanningAttachedLoot;
+exports.restorePlanningAttachedLoot = restorePlanningAttachedLoot;
 /** Privileged continuation for preselected items still attached to living entities. */
 const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
 const PATH = "/runtime/attachedLootContinuation";
@@ -38469,7 +38467,6 @@ function capturePlanningAttachedLoot(rooms, saveItem) {
         }
     return validate({ format: "horizon-attached-loot-v1", entities });
 }
-exports.capturePlanningAttachedLoot = capturePlanningAttachedLoot;
 function restorePlanningAttachedLoot(input, rooms, spawnItem) {
     const v = validate(input), targets = new Map();
     for (const room of rooms)
@@ -38501,7 +38498,6 @@ function restorePlanningAttachedLoot(input, rooms, spawnItem) {
         entry.entity.lootDropped = entry.lootDropped;
     }
 }
-exports.restorePlanningAttachedLoot = restorePlanningAttachedLoot;
 
 
 /***/ }),
@@ -38515,7 +38511,8 @@ exports.restorePlanningAttachedLoot = restorePlanningAttachedLoot;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.restorePlanningEmptyLoot = exports.capturePlanningEmptyLoot = void 0;
+exports.capturePlanningEmptyLoot = capturePlanningEmptyLoot;
+exports.restorePlanningEmptyLoot = restorePlanningEmptyLoot;
 /** Explicitly empty preselected loot is state, not permission to reroll on load. */
 const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
 const PATH = "/runtime/emptyLootContinuation";
@@ -38547,7 +38544,6 @@ function capturePlanningEmptyLoot(rooms) {
                 entities.push({ gid: e.globalId, kind: e.constructor.name, roomGid: r.globalId, lootDropped: e.lootDropped });
     return validate({ format: "horizon-empty-loot-v1", entities });
 }
-exports.capturePlanningEmptyLoot = capturePlanningEmptyLoot;
 function restorePlanningEmptyLoot(input, rooms) {
     const v = validate(input), targets = new Map();
     for (const r of rooms)
@@ -38575,7 +38571,6 @@ function restorePlanningEmptyLoot(input, rooms) {
         e.lootDropped = lootDropped;
     }
 }
-exports.restorePlanningEmptyLoot = restorePlanningEmptyLoot;
 
 
 /***/ }),
@@ -38589,7 +38584,8 @@ exports.restorePlanningEmptyLoot = restorePlanningEmptyLoot;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.restorePlanningInteraction = exports.capturePlanningInteraction = void 0;
+exports.capturePlanningInteraction = capturePlanningInteraction;
+exports.restorePlanningInteraction = restorePlanningInteraction;
 /** Planning-only restoration of the ordinary down-ladder confirmation. */
 const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
 const PATH = "/runtime/interactionContinuation";
@@ -38605,7 +38601,6 @@ function capturePlanningInteraction(player, isLadder) {
     return { format: "horizon-down-ladder-prompt-v1", roomGid: room.globalId,
         x: player.x, y: player.y, z: player.z };
 }
-exports.capturePlanningInteraction = capturePlanningInteraction;
 function restorePlanningInteraction(input, player, players, isLadder) {
     if (input == null)
         return;
@@ -38625,7 +38620,6 @@ function restorePlanningInteraction(input, player, players, isLadder) {
     if (!player.screenMessage.open)
         invalid("Ladder did not recreate its confirmation");
 }
-exports.restorePlanningInteraction = restorePlanningInteraction;
 
 
 /***/ }),
@@ -38639,7 +38633,8 @@ exports.restorePlanningInteraction = restorePlanningInteraction;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.restorePlanningPaths = exports.capturePlanningPaths = void 0;
+exports.capturePlanningPaths = capturePlanningPaths;
+exports.restorePlanningPaths = restorePlanningPaths;
 /** Planning-only cached AI route continuation. Ordinary saves intentionally omit it. */
 const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
 const PATH = "/runtime/pathContinuation";
@@ -38698,7 +38693,6 @@ function capturePlanningPaths(rooms, supported) {
         }
     return validate({ format: "horizon-enemy-path-cache-v1", entities });
 }
-exports.capturePlanningPaths = capturePlanningPaths;
 function restorePlanningPaths(input, rooms, supported) {
     const v = validate(input), targets = new Map();
     for (const r of rooms)
@@ -38719,7 +38713,6 @@ function restorePlanningPaths(input, rooms, supported) {
     for (const s of staged)
         s.entity._pathCache = s.cache;
 }
-exports.restorePlanningPaths = restorePlanningPaths;
 
 
 /***/ }),
@@ -38733,7 +38726,8 @@ exports.restorePlanningPaths = restorePlanningPaths;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.restorePlanningResources = exports.capturePlanningResources = void 0;
+exports.capturePlanningResources = capturePlanningResources;
+exports.restorePlanningResources = restorePlanningResources;
 /** Planning-only mutable resource state omitted by ordinary Save V2. */
 const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
 const PATH = "/runtime/resourceContinuation";
@@ -38771,7 +38765,6 @@ function capturePlanningResources(rooms, supported) {
                     fishCount: e.fishCount, active: e.active, startFrame: e.startFrame });
     return validate({ format: "horizon-resource-state-v1", entities });
 }
-exports.capturePlanningResources = capturePlanningResources;
 function restorePlanningResources(input, rooms, supported) {
     const v = validate(input), targets = new Map();
     for (const r of rooms)
@@ -38800,7 +38793,6 @@ function restorePlanningResources(input, rooms, supported) {
         e.startFrame = state.startFrame;
     }
 }
-exports.restorePlanningResources = restorePlanningResources;
 
 
 /***/ }),
@@ -38814,7 +38806,8 @@ exports.restorePlanningResources = restorePlanningResources;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.restorePlanningSpawners = exports.capturePlanningSpawners = void 0;
+exports.capturePlanningSpawners = capturePlanningSpawners;
+exports.restorePlanningSpawners = restorePlanningSpawners;
 /** Planning-only Spawner state omitted by ordinary Save V2. */
 const agentPlanning_1 = __webpack_require__(/*! ./agentPlanning */ "./src/game/agentPlanning.ts");
 const PATH = "/runtime/spawnerContinuation";
@@ -38865,7 +38858,6 @@ function capturePlanningSpawners(rooms, supported) {
                     isBossEnemy: e.isBossEnemy });
     return validate({ format: "horizon-spawner-state-v1", entities });
 }
-exports.capturePlanningSpawners = capturePlanningSpawners;
 function restorePlanningSpawners(input, rooms, supported) {
     const v = validate(input), targets = new Map();
     for (const room of rooms)
@@ -38909,7 +38901,6 @@ function restorePlanningSpawners(input, rooms, supported) {
         e.isBossEnemy = state.isBossEnemy;
     }
 }
-exports.restorePlanningSpawners = restorePlanningSpawners;
 
 
 /***/ }),
@@ -38923,7 +38914,10 @@ exports.restorePlanningSpawners = restorePlanningSpawners;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.restoreWarningContinuation = exports.readWarningContinuation = exports.captureWarningContinuation = exports.WARNING_CONTINUATION_FORMAT = void 0;
+exports.WARNING_CONTINUATION_FORMAT = void 0;
+exports.captureWarningContinuation = captureWarningContinuation;
+exports.readWarningContinuation = readWarningContinuation;
+exports.restoreWarningContinuation = restoreWarningContinuation;
 /** Planning-only continuation of warning identity/lifecycle omitted by ordinary Save V2.
  * Never serializes live objects, changes save codecs, or edits the visible world.
  */
@@ -39045,7 +39039,6 @@ function captureWarningContinuation(rooms) {
             sources: Array.from(retired.values(), entry => entry.state) };
     return readWarningContinuation(result);
 }
-exports.captureWarningContinuation = captureWarningContinuation;
 /** Strict bounded data validation precedes factory calls and live-object mutation. */
 function readWarningContinuation(input) {
     // The existing lossless codec rejects cycles, getters, functions and unbounded trees.
@@ -39115,7 +39108,6 @@ function readWarningContinuation(input) {
     }
     return v;
 }
-exports.readWarningContinuation = readWarningContinuation;
 /** Restore into the isolated, already-loaded game. Callers enforce simulator-only access. */
 function restoreWarningContinuation(input, rooms, make) {
     const value = readWarningContinuation(input), { roomMap, entities } = topology(rooms);
@@ -39165,7 +39157,6 @@ function restoreWarningContinuation(input, rooms, make) {
             o.owner.hitWarnings = o.list;
     }
 }
-exports.restoreWarningContinuation = restoreWarningContinuation;
 
 
 /***/ }),
@@ -39179,7 +39170,9 @@ exports.restoreWarningContinuation = restoreWarningContinuation;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.observeWarnings = exports.observeItem = exports.observeEntity = void 0;
+exports.observeEntity = observeEntity;
+exports.observeItem = observeItem;
+exports.observeWarnings = observeWarnings;
 /** Explicit, read-only feature projection. Missing values mean unknown, never zero. */
 const numberOrNull = (value) => typeof value === "number" && Number.isFinite(value) ? value : null;
 const booleanOrNull = (value) => typeof value === "boolean" ? value : null;
@@ -39215,7 +39208,6 @@ function observeEntity(source) {
         },
     };
 }
-exports.observeEntity = observeEntity;
 function observeItem(item) {
     return {
         id: stringOrNull(item.globalId), kind: item.constructor.name,
@@ -39242,7 +39234,6 @@ function observeItem(item) {
         },
     };
 }
-exports.observeItem = observeItem;
 function observeWarnings(warnings) {
     return warnings.filter(warning => !warning.dead).map(warning => {
         const fields = warning.getSaveFields();
@@ -39261,7 +39252,6 @@ function observeWarnings(warnings) {
         };
     });
 }
-exports.observeWarnings = observeWarnings;
 
 
 /***/ }),
@@ -39868,11 +39858,11 @@ const WIZARD_CARDINAL_2 = [
 // the wizard's 2-tile width; far ends pushed one tile further outward; all one tile up.
 const BIG_WIZARD_CARDINAL = [
     { x: -2, y: -1 },
-    { x: -4, y: -1 },
+    { x: -4, y: -1 }, // left (near, far)
     { x: 2, y: -1 },
-    { x: 4, y: -1 },
+    { x: 4, y: -1 }, // right (near, far)
     { x: 0, y: -3 },
-    { x: 0, y: -5 },
+    { x: 0, y: -5 }, // up (near, far)
     { x: 0, y: 1 },
     { x: 0, y: 3 }, // down (near, far)
 ];
@@ -40176,13 +40166,13 @@ exports.BESTIARY_ENEMIES = {
                 effects: [
                     {
                         kind: "wizardFireball",
-                        state: 1,
+                        state: 1, // previous (cardinal) telegraph
                         variant: "fire",
                         offsets: CARDINAL_1,
                     },
                     {
                         kind: "wizardFireball",
-                        state: 0,
+                        state: 0, // new (diagonal) spawn
                         variant: "fire",
                         offsets: DIAGONAL_1,
                     },
@@ -40201,13 +40191,13 @@ exports.BESTIARY_ENEMIES = {
                 effects: [
                     {
                         kind: "wizardFireball",
-                        state: 2,
+                        state: 2, // previous (cardinal) explosion
                         variant: "fire",
                         offsets: CARDINAL_1,
                     },
                     {
                         kind: "wizardFireball",
-                        state: 1,
+                        state: 1, // diagonal telegraph
                         variant: "fire",
                         offsets: DIAGONAL_1,
                     },
@@ -41300,7 +41290,9 @@ exports.CameraAnimation = CameraAnimation;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.combatEncounter = exports.isCombatScenario = exports.COMBAT_SCENARIOS = exports.COMBAT_TESTBED_VERSION = void 0;
+exports.COMBAT_SCENARIOS = exports.COMBAT_TESTBED_VERSION = void 0;
+exports.isCombatScenario = isCombatScenario;
+exports.combatEncounter = combatEncounter;
 /** Versioned, deterministic setup data. Never part of the policy's action space. */
 exports.COMBAT_TESTBED_VERSION = 6;
 exports.COMBAT_SCENARIOS = ['combat-skull', 'combat-zombie', 'combat-bigskull',
@@ -41312,7 +41304,6 @@ exports.COMBAT_SCENARIOS = ['combat-skull', 'combat-zombie', 'combat-bigskull',
 function isCombatScenario(value) {
     return exports.COMBAT_SCENARIOS.includes(value);
 }
-exports.isCombatScenario = isCombatScenario;
 function combatEncounter(scenario) {
     if (!isCombatScenario(scenario))
         throw new Error('Unsupported combat encounter');
@@ -41346,7 +41337,6 @@ function combatEncounter(scenario) {
         player: { x: 12, y: 12, health: null }, walls, objects,
         enemies: names.map((type, i) => ({ type, alert, x: alert ? (type.startsWith('big') ? 11 : 12) : pocket ? 12 : 13, y: alert ? 13 : pocket ? 13 : names.length === 1 ? 12 : 9 + i * 3 })) };
 }
-exports.combatEncounter = combatEncounter;
 
 
 /***/ }),
@@ -42149,7 +42139,7 @@ var ProjectileType;
 (function (ProjectileType) {
     ProjectileType[ProjectileType["SPAWN"] = 0] = "SPAWN";
     ProjectileType[ProjectileType["WIZARD"] = 1] = "WIZARD";
-})(ProjectileType = exports.ProjectileType || (exports.ProjectileType = {}));
+})(ProjectileType || (exports.ProjectileType = ProjectileType = {}));
 class ProjectileState {
     // enemy shields are not persisted anymore
     constructor(projectile, game) {
@@ -42273,7 +42263,7 @@ var EnemyType;
     EnemyType[EnemyType["ROOK_STATUE"] = 63] = "ROOK_STATUE";
     EnemyType[EnemyType["BISHOP_STATUE"] = 64] = "BISHOP_STATUE";
     EnemyType[EnemyType["ECTOMANCER"] = 65] = "ECTOMANCER";
-})(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
+})(EnemyType || (exports.EnemyType = EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
         this.roomID = game.rooms.indexOf(enemy.room);
@@ -43097,7 +43087,7 @@ var ItemType;
     ItemType[ItemType["SHIELD_RIGHT_FRAGMENT"] = 54] = "SHIELD_RIGHT_FRAGMENT";
     ItemType[ItemType["IRON_ORE"] = 55] = "IRON_ORE";
     ItemType[ItemType["IRON_BAR"] = 56] = "IRON_BAR";
-})(ItemType = exports.ItemType || (exports.ItemType = {}));
+})(ItemType || (exports.ItemType = ItemType = {}));
 class ItemState {
     constructor(item, game) {
         // Add null check at the beginning
@@ -44140,7 +44130,7 @@ var TileType;
     TileType[TileType["FOUNTAIN"] = 16] = "FOUNTAIN";
     TileType[TileType["COFFIN"] = 17] = "COFFIN";
     TileType[TileType["BONES"] = 18] = "BONES";
-})(TileType = exports.TileType || (exports.TileType = {}));
+})(TileType || (exports.TileType = TileType = {}));
 class TileState {
     constructor(tile, game) {
         // Add null check at the beginning
@@ -44606,7 +44596,7 @@ var InputEnum;
     InputEnum[InputEnum["ENTER"] = 28] = "ENTER";
     InputEnum[InputEnum["R"] = 29] = "R";
     InputEnum[InputEnum["C"] = 30] = "C";
-})(InputEnum = exports.InputEnum || (exports.InputEnum = {}));
+})(InputEnum || (exports.InputEnum = InputEnum = {}));
 exports.Input = {
     _pressed: {},
     isTapHold: false,
@@ -45207,13 +45197,13 @@ exports.Input = {
     },
     _isMouseHold: false,
     mouseDownStartTime: null,
-    HOLD_THRESH: 200,
+    HOLD_THRESH: 200, // Adjust this value as needed
     holdCallback: null,
     // Swipe hold tracking
     lastSwipeTime: 0,
     lastSwipeDirection: null,
     swipeHoldActive: false,
-    swipeHoldRepeating: false,
+    swipeHoldRepeating: false, // Track if we're in repeat mode yet
     // True for one or more frames after a confirmed clean tap (no swipe, no drag, no long-press).
     // Reset on the next touchstart. Used by systems that should only fire on tap release.
     tapFired: false,
@@ -45904,7 +45894,7 @@ exports.err = err;
  * or item diverged — unlike a hash, which only tells you "something changed".
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.captureFingerprint = void 0;
+exports.captureFingerprint = captureFingerprint;
 const enemy_1 = __webpack_require__(/*! ../../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const enemiesBuiltins_1 = __webpack_require__(/*! ./registry/enemiesBuiltins */ "./src/game/save/registry/enemiesBuiltins.ts");
@@ -46189,7 +46179,6 @@ function captureFingerprint(game) {
         roomFingerprints: roomFPs,
     };
 }
-exports.captureFingerprint = captureFingerprint;
 
 
 /***/ }),
@@ -50532,7 +50521,9 @@ exports.registerBuiltinTileCodecsV2 = registerBuiltinTileCodecsV2;
  * describing exactly what diverged.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.formatReport = exports.validateRoundtrip = exports.diffFingerprints = void 0;
+exports.diffFingerprints = diffFingerprints;
+exports.validateRoundtrip = validateRoundtrip;
+exports.formatReport = formatReport;
 const fingerprint_1 = __webpack_require__(/*! ./fingerprint */ "./src/game/save/fingerprint.ts");
 const writeV2_1 = __webpack_require__(/*! ./writeV2 */ "./src/game/save/writeV2.ts");
 const validate_1 = __webpack_require__(/*! ./validate */ "./src/game/save/validate.ts");
@@ -50563,7 +50554,6 @@ function diffFingerprints(before, after) {
     diffRooms(before.roomFingerprints, after.roomFingerprints, diffs);
     return diffs;
 }
-exports.diffFingerprints = diffFingerprints;
 // ---------------------------------------------------------------------------
 // Player diffs
 // ---------------------------------------------------------------------------
@@ -51032,7 +51022,6 @@ async function validateRoundtrip(game) {
         };
     }
 }
-exports.validateRoundtrip = validateRoundtrip;
 // ---------------------------------------------------------------------------
 // Pretty-print helpers
 // ---------------------------------------------------------------------------
@@ -51055,7 +51044,6 @@ function formatReport(report) {
     }
     return lines.join("\n");
 }
-exports.formatReport = formatReport;
 
 
 /***/ }),
@@ -51177,7 +51165,9 @@ exports.ITEM_KIND_VALUES_V2 = [
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.sameFingerprint = exports.isLiveGameUnchanged = exports.createSimulationSnapshot = void 0;
+exports.createSimulationSnapshot = createSimulationSnapshot;
+exports.isLiveGameUnchanged = isLiveGameUnchanged;
+exports.sameFingerprint = sameFingerprint;
 const fingerprint_1 = __webpack_require__(/*! ./fingerprint */ "./src/game/save/fingerprint.ts");
 const writeV2_1 = __webpack_require__(/*! ./writeV2 */ "./src/game/save/writeV2.ts");
 const validate_1 = __webpack_require__(/*! ./validate */ "./src/game/save/validate.ts");
@@ -51200,7 +51190,6 @@ function createSimulationSnapshot(game) {
     }
     return { ok: true, value: { save: parsed.value, serialized, fingerprint: before } };
 }
-exports.createSimulationSnapshot = createSimulationSnapshot;
 /**
  * Guard used before and after branch evaluation. A branch runner must leave the
  * visible game exactly as it was when this snapshot was captured.
@@ -51208,11 +51197,9 @@ exports.createSimulationSnapshot = createSimulationSnapshot;
 function isLiveGameUnchanged(game, snapshot) {
     return sameFingerprint((0, fingerprint_1.captureFingerprint)(game), snapshot.fingerprint);
 }
-exports.isLiveGameUnchanged = isLiveGameUnchanged;
 function sameFingerprint(a, b) {
     return JSON.stringify(a) === JSON.stringify(b);
 }
-exports.sameFingerprint = sameFingerprint;
 
 
 /***/ }),
@@ -51234,7 +51221,7 @@ exports.sameFingerprint = sameFingerprint;
  *   __devPopulateTestRoom(true)  — clear existing entities/items first
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.populateTestRoom = void 0;
+exports.populateTestRoom = populateTestRoom;
 // ---- Entity constructors ----
 const barrel_1 = __webpack_require__(/*! ../../entity/object/barrel */ "./src/entity/object/barrel.ts");
 const bomb_1 = __webpack_require__(/*! ../../entity/object/bomb */ "./src/entity/object/bomb.ts");
@@ -51623,7 +51610,6 @@ function populateTestRoom(room, game, clearFirst = false) {
         `${entityCount + 1} entities (incl. vending_machine), ${itemCount} items. ` +
         `${positions.length} floor positions remaining.`);
 }
-exports.populateTestRoom = populateTestRoom;
 
 
 /***/ }),
@@ -54640,7 +54626,7 @@ const collectPersistedEnemies = (game, room, nowMs) => {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.traceSaveState = void 0;
+exports.traceSaveState = traceSaveState;
 /** Capture only game diagnostics, never the full save or player/account identifiers. */
 function traceSaveState(game, event, save) {
     try {
@@ -54681,7 +54667,6 @@ function traceSaveState(game, event, save) {
         console.warn("[save-diagnostic] capture failed", String(error));
     }
 }
-exports.traceSaveState = traceSaveState;
 
 
 /***/ }),
@@ -55020,7 +55005,7 @@ exports.loadSettings = loadSettings;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.advanceSimulationEffects = void 0;
+exports.advanceSimulationEffects = advanceSimulationEffects;
 /** Shared by the browser frame loop and a future headless simulation driver. */
 function advanceSimulationEffects(game, delta) {
     if (!Number.isFinite(delta) || delta < 0)
@@ -55035,7 +55020,6 @@ function advanceSimulationEffects(game, delta) {
             effect.advanceSimulation(delta);
     }
 }
-exports.advanceSimulationEffects = advanceSimulationEffects;
 
 
 /***/ }),
@@ -55049,7 +55033,12 @@ exports.advanceSimulationEffects = advanceSimulationEffects;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.WEAPON_SKILL_RULES = exports.CRAFTING_XP = exports.computeWoodcuttingXp = exports.computeMiningXp = exports.computeXpCrystalXp = exports.depthXpMultiplier = exports.GATHERING_XP = exports.computeEnemyKillBaseXp = exports.ENEMY_XP = void 0;
+exports.WEAPON_SKILL_RULES = exports.CRAFTING_XP = exports.GATHERING_XP = exports.ENEMY_XP = void 0;
+exports.computeEnemyKillBaseXp = computeEnemyKillBaseXp;
+exports.depthXpMultiplier = depthXpMultiplier;
+exports.computeXpCrystalXp = computeXpCrystalXp;
+exports.computeMiningXp = computeMiningXp;
+exports.computeWoodcuttingXp = computeWoodcuttingXp;
 exports.ENEMY_XP = {
     enemyHpMultiplier: 5,
     // Bosses should be meaningfully better XP than regular mobs with similar HP.
@@ -55063,7 +55052,6 @@ function computeEnemyKillBaseXp(args) {
     const bossMultiplier = args.isBoss ? exports.ENEMY_XP.bossMultiplier : 1;
     return Math.ceil(args.maxHealth * exports.ENEMY_XP.enemyHpMultiplier * depthMultiplier * bossMultiplier);
 }
-exports.computeEnemyKillBaseXp = computeEnemyKillBaseXp;
 exports.GATHERING_XP = {
     fishing: {
         baseMin: 100,
@@ -55089,7 +55077,6 @@ exports.GATHERING_XP = {
 function depthXpMultiplier(depth) {
     return Math.pow(exports.GATHERING_XP.depthMultiplierBase, depth);
 }
-exports.depthXpMultiplier = depthXpMultiplier;
 /**
  * XP crystals are intended to be "meaningful chunks" of skill XP (especially on deeper floors),
  * scaling with both dungeon depth and the recipient skill's current level.
@@ -55100,16 +55087,13 @@ function computeXpCrystalXp(args) {
     const base = 240 + lvl * 55;
     return Math.ceil(base * depthMultiplier);
 }
-exports.computeXpCrystalXp = computeXpCrystalXp;
 function computeMiningXp(args) {
     const base = exports.GATHERING_XP.miningByNodeName[args.nodeName.toLowerCase()] ?? 60;
     return Math.ceil(base * depthXpMultiplier(args.depth));
 }
-exports.computeMiningXp = computeMiningXp;
 function computeWoodcuttingXp(args) {
     return Math.ceil(exports.GATHERING_XP.woodcutting.base * depthXpMultiplier(args.depth));
 }
-exports.computeWoodcuttingXp = computeWoodcuttingXp;
 exports.CRAFTING_XP = {
     smithingPerBar: 90,
     goldRing: 120,
@@ -55209,7 +55193,12 @@ exports.WEAPON_SKILL_RULES = {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.xpUntilNextLevel = exports.levelForXp = exports.xpForLevel = exports.MAX_SKILL_LEVEL = exports.createEmptySkillsXp = exports.isSkill = exports.SKILL_DISPLAY_NAME = exports.SKILLS = void 0;
+exports.MAX_SKILL_LEVEL = exports.SKILL_DISPLAY_NAME = exports.SKILLS = void 0;
+exports.isSkill = isSkill;
+exports.createEmptySkillsXp = createEmptySkillsXp;
+exports.xpForLevel = xpForLevel;
+exports.levelForXp = levelForXp;
+exports.xpUntilNextLevel = xpUntilNextLevel;
 exports.SKILLS = [
     "melee",
     "magic",
@@ -55233,7 +55222,6 @@ exports.SKILL_DISPLAY_NAME = {
 function isSkill(value) {
     return (typeof value === "string" && exports.SKILLS.includes(value));
 }
-exports.isSkill = isSkill;
 function createEmptySkillsXp() {
     return {
         melee: 0,
@@ -55246,7 +55234,6 @@ function createEmptySkillsXp() {
         woodcutting: 0,
     };
 }
-exports.createEmptySkillsXp = createEmptySkillsXp;
 exports.MAX_SKILL_LEVEL = 99;
 /**
  * RuneScape-inspired XP curve, tuned to be more aggressive at higher levels.
@@ -55292,7 +55279,6 @@ function xpForLevel(level) {
     const clamped = Math.max(1, Math.min(exports.MAX_SKILL_LEVEL + 1, Math.floor(level)));
     return t[clamped] ?? 0;
 }
-exports.xpForLevel = xpForLevel;
 function levelForXp(xp) {
     const t = ensureXpTable();
     const x = Math.max(0, Math.floor(xp));
@@ -55310,7 +55296,6 @@ function levelForXp(xp) {
     const displayed = Math.min(exports.MAX_SKILL_LEVEL, Math.max(1, lo));
     return displayed;
 }
-exports.levelForXp = levelForXp;
 function xpUntilNextLevel(xp) {
     const level = levelForXp(xp);
     const currentLevelXp = xpForLevel(level);
@@ -55329,7 +55314,6 @@ function xpUntilNextLevel(xp) {
         xpRemaining,
     };
 }
-exports.xpUntilNextLevel = xpUntilNextLevel;
 
 
 /***/ }),
@@ -55343,7 +55327,8 @@ exports.xpUntilNextLevel = xpUntilNextLevel;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getSpellDiagnostics = exports.traceSpell = void 0;
+exports.traceSpell = traceSpell;
+exports.getSpellDiagnostics = getSpellDiagnostics;
 const events = [];
 let sequence = 0;
 /** Bounded, scalar-only trace: diagnostic failures must never affect casting. */
@@ -55375,11 +55360,9 @@ function traceSpell(player, event, details = {}) {
         return undefined;
     }
 }
-exports.traceSpell = traceSpell;
 function getSpellDiagnostics() {
     return events.map(event => ({ ...event }));
 }
-exports.getSpellDiagnostics = getSpellDiagnostics;
 
 
 /***/ }),
@@ -55900,7 +55883,8 @@ exports.markTutorialHintShown = markTutorialHintShown;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.IdGenerator = exports.readIdGeneratorSnapshot = exports.IdGeneratorSnapshotError = exports.ID_GENERATOR_SNAPSHOT_FORMAT = void 0;
+exports.IdGenerator = exports.IdGeneratorSnapshotError = exports.ID_GENERATOR_SNAPSHOT_FORMAT = void 0;
+exports.readIdGeneratorSnapshot = readIdGeneratorSnapshot;
 /**
  * Global, monotonic ID generator.
  * ------------------------------------------------------------------
@@ -55959,7 +55943,6 @@ function readIdGeneratorSnapshot(value, path = "/allocator") {
     }
     return Object.freeze({ format: exports.ID_GENERATOR_SNAPSHOT_FORMAT, next: record.next, reserved: Object.freeze(reserved) });
 }
-exports.readIdGeneratorSnapshot = readIdGeneratorSnapshot;
 class IdGenerator {
     /**
      * Generate a fresh globally-unique ID.
@@ -58278,7 +58261,7 @@ class Map {
                         entities: room.entities,
                         items: room.items,
                         players: this.game.players,
-                        downLadders: this.getDownLaddersFromRoom(room),
+                        downLadders: this.getDownLaddersFromRoom(room), // Add down ladders to map data
                         seenTiles: this.seenTilesByMapGroup.get(currentMapGroup) || new Set(), // Add seen tiles to map data
                     });
                 }
@@ -59968,16 +59951,16 @@ const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/
 const waterOverlay_1 = __webpack_require__(/*! ./waterOverlay */ "./src/gui/waterOverlay.ts");
 class PostProcessor {
     static applyDefaultLayer() {
-        game_1.Game.ctx.globalAlpha = PostProcessor.settings.globalAlpha;
+        game_1.Game.ctx.globalAlpha = _a.settings.globalAlpha;
         game_1.Game.ctx.globalCompositeOperation =
-            PostProcessor.settings.globalCompositeOperation;
-        game_1.Game.ctx.fillStyle = PostProcessor.settings.fillStyle;
+            _a.settings.globalCompositeOperation;
+        game_1.Game.ctx.fillStyle = _a.settings.fillStyle;
     }
     static applyUnderwaterLayer() {
-        game_1.Game.ctx.globalAlpha = PostProcessor.settings.underwaterBaseAlpha;
+        game_1.Game.ctx.globalAlpha = _a.settings.underwaterBaseAlpha;
         game_1.Game.ctx.globalCompositeOperation =
-            PostProcessor.settings.underwaterCompositeOperation;
-        game_1.Game.ctx.fillStyle = PostProcessor.settings.underwaterFillStyle;
+            _a.settings.underwaterCompositeOperation;
+        game_1.Game.ctx.fillStyle = _a.settings.underwaterFillStyle;
         game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
     }
 }
@@ -59993,12 +59976,12 @@ PostProcessor.settings = {
     underwaterCompositeOperation: "source-over",
 };
 PostProcessor.draw = (delta, underwater = false, cameraOrigin) => {
-    if (!PostProcessor.settings.enabled)
+    if (!_a.settings.enabled)
         return;
     game_1.Game.ctx.save();
     if (underwater) {
         game_1.Game.ctx.save();
-        PostProcessor.applyUnderwaterLayer();
+        _a.applyUnderwaterLayer();
         waterOverlay_1.WaterOverlay.draw(game_1.Game.ctx, delta, cameraOrigin);
         game_1.Game.ctx.fillStyle = _a.settings.underwaterFillStyle;
         game_1.Game.ctx.globalCompositeOperation =
@@ -60006,13 +59989,13 @@ PostProcessor.draw = (delta, underwater = false, cameraOrigin) => {
         game_1.Game.ctx.globalAlpha = _a.settings.underwaterBaseAlpha;
         game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
         _a.settings.globalCompositeOperation = "lighten";
-        PostProcessor.applyDefaultLayer();
+        _a.applyDefaultLayer();
         game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
         game_1.Game.ctx.restore();
         _a.settings.globalCompositeOperation = "screen";
         return;
     }
-    PostProcessor.applyDefaultLayer();
+    _a.applyDefaultLayer();
     game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
     game_1.Game.ctx.restore();
 };
@@ -65392,7 +65375,7 @@ DropTable.drops = [
     { itemType: "weaponcurse", dropRate: 200, category: ["consumable"] },
     { itemType: "weaponplague", dropRate: 200, category: ["consumable"] },
     // Common items
-    { itemType: "coin", dropRate: 10, category: ["coin"] },
+    { itemType: "coin", dropRate: 10, category: ["coin"] }, // Always drops
     // XP crystals (melee favored)
     { itemType: "meleeXpCrystal", dropRate: 50, category: ["xpCrystal"] },
     { itemType: "magicXpCrystal", dropRate: 50, category: ["xpCrystal"] },
@@ -68058,10 +68041,13 @@ const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings *
 class Pickaxe extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
+        // Weapon installs toggleEquip as an instance field, so capture it before
+        // applying the tool-only rule. It is not callable through super.
+        const toggleWeaponEquip = this.toggleEquip;
         this.toggleEquip = () => {
             if (gameplaySettings_1.GameplaySettings.PICKAXE_AS_TOOL)
                 return;
-            super.toggleEquip();
+            toggleWeaponEquip();
         };
         this.tileX = 30;
         this.tileY = 0;
@@ -69926,33 +69912,33 @@ class Scythe extends weapon_1.Weapon {
             switch (this.wielder.direction) {
                 case game_1.Direction.DOWN:
                     positions = [
-                        { x: newX - 1, y: newY },
-                        { x: newX + 1, y: newY },
-                        { x: newX - 1, y: newY - 1 },
+                        { x: newX - 1, y: newY }, // leftCorner
+                        { x: newX + 1, y: newY }, // rightCorner
+                        { x: newX - 1, y: newY - 1 }, // leftEdge
                         { x: newX + 1, y: newY - 1 }, // rightEdge
                     ];
                     break;
                 case game_1.Direction.UP:
                     positions = [
-                        { x: newX + 1, y: newY },
-                        { x: newX - 1, y: newY },
-                        { x: newX + 1, y: newY + 1 },
+                        { x: newX + 1, y: newY }, // leftCorner
+                        { x: newX - 1, y: newY }, // rightCorner
+                        { x: newX + 1, y: newY + 1 }, // leftEdge
                         { x: newX - 1, y: newY + 1 }, // rightEdge
                     ];
                     break;
                 case game_1.Direction.LEFT:
                     positions = [
-                        { x: newX, y: newY + 1 },
-                        { x: newX, y: newY - 1 },
-                        { x: newX + 1, y: newY + 1 },
+                        { x: newX, y: newY + 1 }, // leftCorner
+                        { x: newX, y: newY - 1 }, // rightCorner
+                        { x: newX + 1, y: newY + 1 }, // leftEdge
                         { x: newX + 1, y: newY - 1 }, // rightEdge
                     ];
                     break;
                 case game_1.Direction.RIGHT:
                     positions = [
-                        { x: newX, y: newY - 1 },
-                        { x: newX, y: newY + 1 },
-                        { x: newX - 1, y: newY - 1 },
+                        { x: newX, y: newY - 1 }, // leftCorner
+                        { x: newX, y: newY + 1 }, // rightCorner
+                        { x: newX - 1, y: newY - 1 }, // leftEdge
                         { x: newX - 1, y: newY + 1 }, // rightEdge
                     ];
                     break;
@@ -72409,9 +72395,9 @@ const environmentData = {
         ],
         enemies: [
             // Cave-dwelling creatures
-            { class: crabEnemy_1.CrabEnemy, weight: 1.5, minDepth: 0 },
-            { class: spiderEnemy_1.SpiderEnemy, weight: 1.2, minDepth: 1 },
-            { class: skullEnemy_1.SkullEnemy, weight: 0.8, minDepth: 0 },
+            { class: crabEnemy_1.CrabEnemy, weight: 1.5, minDepth: 0 }, // Crabs like caves
+            { class: spiderEnemy_1.SpiderEnemy, weight: 1.2, minDepth: 1 }, // Cave spiders
+            { class: skullEnemy_1.SkullEnemy, weight: 0.8, minDepth: 0 }, // Ancient cave remains
             // Mid depth cave enemies
             { class: ratEnemy_1.RatEnemy, weight: 1.2, minDepth: 0 },
             //{ class: ArmoredzombieEnemy, weight: 0.6, minDepth: 1 }, // Less common undead
@@ -72493,13 +72479,13 @@ const environmentData = {
                 weight: 0.25,
                 minDepth: 0,
                 blob: { enabled: true, weight: 0.06, diameter: 7, chance: 0.5 },
-            },
+            }, // Frogs love forests
             {
                 class: beetleEnemy_1.BeetleEnemy,
                 weight: 0.001,
                 minDepth: 0,
                 blob: { enabled: true, weight: 0.05, diameter: 6, chance: 0.4 },
-            },
+            }, // Rare magic users
             //{ class: SpiderEnemy, weight: 0.25, minDepth: 0 }, // Forest spiders
             // Less common forest enemies
             {
@@ -72507,26 +72493,26 @@ const environmentData = {
                 weight: 0.3,
                 minDepth: 0,
                 blob: { enabled: true, weight: 0.04, diameter: 5, chance: 0.35 },
-            },
+            }, // Rare in forest
             {
                 class: zombieEnemy_1.ZombieEnemy,
                 weight: 0.2,
                 minDepth: 0,
                 blob: { enabled: true, weight: 0.03, diameter: 5, chance: 0.3 },
-            },
+            }, // Very rare undead
             {
                 class: skullEnemy_1.SkullEnemy,
                 weight: 0.1,
                 minDepth: 0,
                 blob: { enabled: true, weight: 0.03, diameter: 5, chance: 0.25 },
-            },
+            }, // Ancient forest spirits
             // Rare magical forest creatures
             {
                 class: energyWizard_1.EnergyWizardEnemy,
                 weight: 0.05,
                 minDepth: 1,
                 blob: { enabled: true, weight: 0.02, diameter: 9, chance: 0.3 },
-            },
+            }, // Forest wizards
             {
                 class: earthWizard_1.EarthWizardEnemy,
                 weight: 0.05,
@@ -72566,14 +72552,14 @@ const environmentData = {
         ],
         enemies: [
             // Decay and poison themed enemies
-            { class: zombieEnemy_1.ZombieEnemy, weight: 1.8, minDepth: 0 },
-            { class: frogEnemy_1.FrogEnemy, weight: 1.5, minDepth: 1 },
-            { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
+            { class: zombieEnemy_1.ZombieEnemy, weight: 1.8, minDepth: 0 }, // Swamp zombies
+            { class: frogEnemy_1.FrogEnemy, weight: 1.5, minDepth: 1 }, // Poison frogs
+            { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 }, // Preserved in swamp
             { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 1.2, minDepth: 1 },
             // Other swamp dwellers
-            { class: crabEnemy_1.CrabEnemy, weight: 0.8, minDepth: 0 },
-            { class: skullEnemy_1.SkullEnemy, weight: 1.0, minDepth: 0 },
-            { class: spiderEnemy_1.SpiderEnemy, weight: 0.6, minDepth: 0 },
+            { class: crabEnemy_1.CrabEnemy, weight: 0.8, minDepth: 0 }, // Swamp crabs
+            { class: skullEnemy_1.SkullEnemy, weight: 1.0, minDepth: 0 }, // Bog spirits
+            { class: spiderEnemy_1.SpiderEnemy, weight: 0.6, minDepth: 0 }, // Swamp spiders
             // Powerful swamp creatures
             { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.8, minDepth: 2 },
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.3, minDepth: 1 }, // Swamp witches
@@ -72589,9 +72575,9 @@ const environmentData = {
         ],
         enemies: [
             // Ice and cold themed enemies
-            { class: crabEnemy_1.CrabEnemy, weight: 1.0, minDepth: 0 },
-            { class: chargeEnemy_1.ChargeEnemy, weight: 1.2, minDepth: 2 },
-            { class: knightEnemy_1.KnightEnemy, weight: 1.0, minDepth: 1 },
+            { class: crabEnemy_1.CrabEnemy, weight: 1.0, minDepth: 0 }, // Ice crabs
+            { class: chargeEnemy_1.ChargeEnemy, weight: 1.2, minDepth: 2 }, // Charging ice beasts
+            { class: knightEnemy_1.KnightEnemy, weight: 1.0, minDepth: 1 }, // Frozen knights
             {
                 class: bigKnightEnemy_1.BigKnightEnemy,
                 weight: 0.15,
@@ -72600,9 +72586,9 @@ const environmentData = {
                 size: { w: 2, h: 2 },
             },
             // Hardy creatures that survive cold
-            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.8, minDepth: 1 },
-            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.9, minDepth: 2 },
-            { class: rookEnemy_1.RookEnemy, weight: 0.7, minDepth: 1 },
+            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.8, minDepth: 1 }, // Frozen zombies
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.9, minDepth: 2 }, // Ice spirits
+            { class: rookEnemy_1.RookEnemy, weight: 0.7, minDepth: 1 }, // Ice constructs
             { class: bishopEnemy_1.BishopEnemy, weight: 0.7, minDepth: 1 },
             // Rare glacier threats
             {
@@ -72631,7 +72617,7 @@ const environmentData = {
         ],
         enemies: [
             // Royal guards and castle defenders
-            { class: knightEnemy_1.KnightEnemy, weight: 2.0, minDepth: 0 },
+            { class: knightEnemy_1.KnightEnemy, weight: 2.0, minDepth: 0 }, // Castle knights
             {
                 class: bigKnightEnemy_1.BigKnightEnemy,
                 weight: 0.2,
@@ -72639,18 +72625,18 @@ const environmentData = {
                 specialSpawnLogic: "clearFloor",
                 size: { w: 2, h: 2 },
             },
-            { class: pawnEnemy_1.PawnEnemy, weight: 1.5, minDepth: 0 },
-            { class: rookEnemy_1.RookEnemy, weight: 1, minDepth: 0, entityWeight: 0.5 },
-            { class: bishopEnemy_1.BishopEnemy, weight: 1, minDepth: 0, entityWeight: 0.5 },
-            { class: queenEnemy_1.QueenEnemy, weight: 0.5, minDepth: 0, entityWeight: 1 },
+            { class: pawnEnemy_1.PawnEnemy, weight: 1.5, minDepth: 0 }, // Castle pawns
+            { class: rookEnemy_1.RookEnemy, weight: 1, minDepth: 0, entityWeight: 0.5 }, // Castle guardians
+            { class: bishopEnemy_1.BishopEnemy, weight: 1, minDepth: 0, entityWeight: 0.5 }, // Castle clergy
+            { class: queenEnemy_1.QueenEnemy, weight: 0.5, minDepth: 0, entityWeight: 1 }, // Royal enemies
             { class: kingEnemy_1.KingEnemy, weight: 0.125, minDepth: 0, entityWeight: 1 },
             // Castle undead
-            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.025, minDepth: 0 },
-            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.025, minDepth: 0 },
+            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.025, minDepth: 0 }, // Fallen guards
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.025, minDepth: 0 }, // Armored spirits
             // Other castle inhabitants
-            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 0 },
-            { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 0 },
-            { class: chargeEnemy_1.ChargeEnemy, weight: 0.01, minDepth: 0 },
+            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 0 }, // Court wizards
+            { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 0 }, // Battle mages
+            { class: chargeEnemy_1.ChargeEnemy, weight: 0.01, minDepth: 0 }, // War beasts
             { class: chessKnightEnemy_1.ChessKnightEnemy, weight: 0.5, minDepth: 0, entityWeight: 0.5 },
         ],
         bosses: [
@@ -72679,7 +72665,7 @@ const environmentData = {
             { class: rookEnemy_1.RookEnemy, weight: 1.2, minDepth: 1 },
             { class: bishopEnemy_1.BishopEnemy, weight: 1.2, minDepth: 1 },
             { class: knightEnemy_1.KnightEnemy, weight: 1.6, minDepth: 1 },
-            { class: pawnEnemy_1.PawnEnemy, weight: 1.5, minDepth: 0 },
+            { class: pawnEnemy_1.PawnEnemy, weight: 1.5, minDepth: 0 }, // Castle pawns
             { class: queenEnemy_1.QueenEnemy, weight: 0.35, minDepth: 2 },
             { class: kingEnemy_1.KingEnemy, weight: 0.125, minDepth: 2 },
             { class: boltcasterEnemy_1.BoltcasterEnemy, weight: 0.25, minDepth: 1 },
@@ -73344,24 +73330,24 @@ const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const enemyMinimumDepth = {
-    1: 0,
-    2: 1,
-    3: 0,
-    4: 0,
-    5: 1,
-    6: 2,
-    7: 1,
-    8: 1,
-    9: 1,
-    10: 2,
-    11: 2,
-    12: 1,
-    13: 2,
-    14: 2,
-    15: 2,
-    16: 2,
-    17: 2,
-    18: 3,
+    1: 0, // CrabEnemy
+    2: 1, // FrogEnemy
+    3: 0, // ZombieEnemy
+    4: 0, // SkullEnemy
+    5: 1, // EnergyWizardEnemy
+    6: 2, // ChargeEnemy
+    7: 1, // RookEnemy
+    8: 1, // BishopEnemy
+    9: 1, // ArmoredzombieEnemy
+    10: 2, // BigSkullEnemy
+    11: 2, // QueenEnemy
+    12: 1, // KnightEnemy
+    13: 2, // BigKnightEnemy
+    14: 2, // FireWizardEnemy
+    15: 2, // ArmoredSkullEnemy  16: 2, // ArmoredKnightEnemy
+    16: 2, // SpiderEnemy
+    17: 2, // MummyEnemy
+    18: 3, // WardenEnemy
     19: 0, // RatEnemy
 };
 /*
@@ -74633,9 +74619,9 @@ class LevelParameterGenerator {
             maxRoomArea: depth > 0 ? 120 + 10 * depth : 40,
             mapWidth: 25 + 5 * depth,
             mapHeight: 25 + 5 * depth,
-            splitProbabilities: [0.75, 1.0, 0.25],
+            splitProbabilities: [0.75, 1.0, 0.25], // Example probabilities
             wallRemoveProbability: depth > 0 ? 0.1 : 1,
-            numLoopDoorsRange: [4, 8],
+            numLoopDoorsRange: [4, 8], // Random between 4 and 8
             numberOfRooms: depth > 0 ? 5 : 3,
             softMaxRoomArea: depth > 0 ? 0.5 * (120 + 10 * depth) : 40,
         };
@@ -74663,7 +74649,9 @@ exports.LevelParameterGenerator = LevelParameterGenerator;
  * roomPopulator.getEnvDrivenSidePathOptions(), and roomPopulator.getNextSidePathEnvType().
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getEnvDrivenSidePathSpec = exports.getDefaultSidePathEnv = exports.getSidePathSpecs = void 0;
+exports.getSidePathSpecs = getSidePathSpecs;
+exports.getDefaultSidePathEnv = getDefaultSidePathEnv;
+exports.getEnvDrivenSidePathSpec = getEnvDrivenSidePathSpec;
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const sidePathManager_1 = __webpack_require__(/*! ./sidePathManager */ "./src/level/sidePathManager.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
@@ -74873,7 +74861,6 @@ function getSidePathSpecs(depth, parentEnv, opts) {
     }
     return specs;
 }
-exports.getSidePathSpecs = getSidePathSpecs;
 /**
  * Default depth→environment mapping used when opts.envType is not set.
  * This is the fallback in `addDownladder` for the rare case where a
@@ -74890,7 +74877,6 @@ function getDefaultSidePathEnv(depth) {
     // Callers that need randomness should set envType explicitly via getSidePathSpecs.
     return environmentTypes_1.EnvType.FOREST;
 }
-exports.getDefaultSidePathEnv = getDefaultSidePathEnv;
 /**
  * For the env-driven exit ladder in single-room sidepath mazes.
  * Returns the spec for the next sidepath in the chain, or null if terminal.
@@ -74900,7 +74886,6 @@ function getEnvDrivenSidePathSpec(parentEnv, numParentRooms) {
         return null;
     return getEnvDrivenSpec(parentEnv, numParentRooms);
 }
-exports.getEnvDrivenSidePathSpec = getEnvDrivenSidePathSpec;
 
 
 /***/ }),
@@ -74925,7 +74910,7 @@ var ValidationErrorType;
     ValidationErrorType["EMPTY_PARTITIONS"] = "EMPTY_PARTITIONS";
     ValidationErrorType["STAIR_ROOM_MISSING"] = "STAIR_ROOM_MISSING";
     ValidationErrorType["INSUFFICIENT_CAVE_ROOMS"] = "INSUFFICIENT_CAVE_ROOMS";
-})(ValidationErrorType = exports.ValidationErrorType || (exports.ValidationErrorType = {}));
+})(ValidationErrorType || (exports.ValidationErrorType = ValidationErrorType = {}));
 class LevelValidator {
     constructor(game, enableDebugMessages = false) {
         this.game = game;
@@ -75272,7 +75257,7 @@ var PathType;
     PathType[PathType["MAIN_PATH"] = 0] = "MAIN_PATH";
     PathType[PathType["SIDE_PATH"] = 1] = "SIDE_PATH";
     PathType[PathType["TUTORIAL"] = 2] = "TUTORIAL";
-})(PathType = exports.PathType || (exports.PathType = {}));
+})(PathType || (exports.PathType = PathType = {}));
 class PartitionConnection {
     constructor(x, y, other) {
         this.x = x;
@@ -76878,37 +76863,37 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 // Color-to-RoomType mapping for level designers
 const COLOR_TO_ROOM_TYPE = {
     // Core room types
-    "rgb(0, 255, 0)": room_1.RoomType.START,
-    "rgb(255, 0, 0)": room_1.RoomType.BOSS,
-    "rgb(0, 0, 255)": room_1.RoomType.DOWNLADDER,
-    "rgb(0, 255, 255)": room_1.RoomType.UPLADDER,
+    "rgb(0, 255, 0)": room_1.RoomType.START, // Green - Starting room
+    "rgb(255, 0, 0)": room_1.RoomType.BOSS, // Red - Boss room
+    "rgb(0, 0, 255)": room_1.RoomType.DOWNLADDER, // Blue - Stairs down
+    "rgb(0, 255, 255)": room_1.RoomType.UPLADDER, // Cyan - Stairs up
     // Special rooms
-    "rgb(255, 255, 0)": room_1.RoomType.TREASURE,
-    "rgb(255, 0, 255)": room_1.RoomType.SHOP,
-    "rgb(128, 0, 128)": room_1.RoomType.FOUNTAIN,
-    "rgb(139, 69, 19)": room_1.RoomType.COFFIN,
-    "rgb(255, 165, 0)": room_1.RoomType.KEYROOM,
+    "rgb(255, 255, 0)": room_1.RoomType.TREASURE, // Yellow - Treasure room
+    "rgb(255, 0, 255)": room_1.RoomType.SHOP, // Magenta - Shop
+    "rgb(128, 0, 128)": room_1.RoomType.FOUNTAIN, // Purple - Fountain room
+    "rgb(139, 69, 19)": room_1.RoomType.COFFIN, // Brown - Coffin room
+    "rgb(255, 165, 0)": room_1.RoomType.KEYROOM, // Orange - Key room
     // Puzzle and special mechanics
-    "rgb(64, 64, 64)": room_1.RoomType.PUZZLE,
-    "rgb(0, 0, 0)": room_1.RoomType.CHESSBOARD,
-    "rgb(192, 192, 192)": room_1.RoomType.MAZE,
-    "rgb(255, 192, 203)": room_1.RoomType.SPAWNER,
+    "rgb(64, 64, 64)": room_1.RoomType.PUZZLE, // Dark gray - Puzzle room
+    "rgb(0, 0, 0)": room_1.RoomType.CHESSBOARD, // Black - Chess room
+    "rgb(192, 192, 192)": room_1.RoomType.MAZE, // Light gray - Maze
+    "rgb(255, 192, 203)": room_1.RoomType.SPAWNER, // Pink - Spawner room
     // Environment types
-    "rgb(34, 139, 34)": room_1.RoomType.GRASS,
-    "rgb(101, 67, 33)": room_1.RoomType.CAVE,
-    "rgb(85, 107, 47)": room_1.RoomType.GRAVEYARD,
-    "rgb(46, 125, 50)": room_1.RoomType.FOREST,
+    "rgb(34, 139, 34)": room_1.RoomType.GRASS, // Forest green - Grass room
+    "rgb(101, 67, 33)": room_1.RoomType.CAVE, // Dark brown - Cave
+    "rgb(85, 107, 47)": room_1.RoomType.GRAVEYARD, // Olive - Graveyard
+    "rgb(46, 125, 50)": room_1.RoomType.FOREST, // Green - Forest
     // Corridors and connections
-    "rgb(160, 160, 160)": room_1.RoomType.CORRIDOR,
-    "rgb(255, 87, 34)": room_1.RoomType.SPIKECORRIDOR,
+    "rgb(160, 160, 160)": room_1.RoomType.CORRIDOR, // Gray - Corridor
+    "rgb(255, 87, 34)": room_1.RoomType.SPIKECORRIDOR, // Red-orange - Spike corridor
     // Cave system
-    "rgb(121, 85, 72)": room_1.RoomType.BIGCAVE,
-    "rgb(78, 52, 46)": room_1.RoomType.ROPECAVE,
-    "rgb(156, 102, 68)": room_1.RoomType.ROPEHOLE,
-    "rgb(141, 110, 99)": room_1.RoomType.ROPEUP,
+    "rgb(121, 85, 72)": room_1.RoomType.BIGCAVE, // Light brown - Big cave
+    "rgb(78, 52, 46)": room_1.RoomType.ROPECAVE, // Dark brown - Rope cave
+    "rgb(156, 102, 68)": room_1.RoomType.ROPEHOLE, // Medium brown - Rope hole
+    "rgb(141, 110, 99)": room_1.RoomType.ROPEUP, // Tan - Rope up
     // Tutorial and misc
-    "rgb(173, 216, 230)": room_1.RoomType.TUTORIAL,
-    "rgb(250, 250, 250)": room_1.RoomType.BIGDUNGEON,
+    "rgb(173, 216, 230)": room_1.RoomType.TUTORIAL, // Light blue - Tutorial
+    "rgb(250, 250, 250)": room_1.RoomType.BIGDUNGEON, // Near white - Big dungeon
     // Default fallback
     "rgb(255, 255, 255)": room_1.RoomType.DUNGEON, // White - Standard dungeon room
 };
@@ -77667,7 +77652,9 @@ exports.PngPartitionGenerator = PngPartitionGenerator;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SidePathManager = exports.createDarkCastleSidePathOptions = exports.createCastleSidePathOptions = exports.CASTLE_LIKE_ENV_TYPES = void 0;
+exports.SidePathManager = exports.CASTLE_LIKE_ENV_TYPES = void 0;
+exports.createCastleSidePathOptions = createCastleSidePathOptions;
+exports.createDarkCastleSidePathOptions = createDarkCastleSidePathOptions;
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
@@ -77709,11 +77696,9 @@ function baseCastleOptions(envType, overrides) {
 function createCastleSidePathOptions(overrides) {
     return baseCastleOptions(environmentTypes_1.EnvType.CASTLE, overrides);
 }
-exports.createCastleSidePathOptions = createCastleSidePathOptions;
 function createDarkCastleSidePathOptions(overrides) {
     return baseCastleOptions(environmentTypes_1.EnvType.DARK_CASTLE, overrides);
 }
-exports.createDarkCastleSidePathOptions = createDarkCastleSidePathOptions;
 /**
  * Centralized manager for creating and wiring up sidepaths (rope caves).
  *
@@ -80015,7 +80000,7 @@ var PlayerDirection;
     PlayerDirection[PlayerDirection["UP"] = 1] = "UP";
     PlayerDirection[PlayerDirection["RIGHT"] = 2] = "RIGHT";
     PlayerDirection[PlayerDirection["LEFT"] = 3] = "LEFT";
-})(PlayerDirection = exports.PlayerDirection || (exports.PlayerDirection = {}));
+})(PlayerDirection || (exports.PlayerDirection = PlayerDirection = {}));
 var DrawDirection;
 (function (DrawDirection) {
     DrawDirection[DrawDirection["X"] = 0] = "X";
@@ -88316,7 +88301,7 @@ var EnemyType;
     EnemyType["snake"] = "snake";
     EnemyType["worm"] = "worm";
     // Add other enemy types here
-})(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
+})(EnemyType || (exports.EnemyType = EnemyType = {}));
 /**
  * Mapping of enemy types to their corresponding classes.
  */
@@ -88396,12 +88381,12 @@ var RoomType;
     RoomType["FOREST"] = "FOREST";
     RoomType["ROPEUP"] = "ROPEUP";
     RoomType["GEMCAVE"] = "GEMCAVE";
-})(RoomType = exports.RoomType || (exports.RoomType = {}));
+})(RoomType || (exports.RoomType = RoomType = {}));
 var TurnState;
 (function (TurnState) {
     TurnState[TurnState["playerTurn"] = 0] = "playerTurn";
     TurnState[TurnState["computerTurn"] = 1] = "computerTurn";
-})(TurnState = exports.TurnState || (exports.TurnState = {}));
+})(TurnState || (exports.TurnState = TurnState = {}));
 var WallDirection;
 (function (WallDirection) {
     WallDirection["NORTH"] = "North";
@@ -88412,7 +88397,7 @@ var WallDirection;
     WallDirection["TOPRIGHT"] = "TopRight";
     WallDirection["BOTTOMLEFT"] = "BottomLeft";
     WallDirection["BOTTOMRIGHT"] = "BottomRight";
-})(WallDirection = exports.WallDirection || (exports.WallDirection = {}));
+})(WallDirection || (exports.WallDirection = WallDirection = {}));
 class Room {
     zKey(x, y) {
         return `${x},${y}`;
@@ -91218,9 +91203,9 @@ class Room {
          */
         this.getExtremeLuminanceFromPoint = (px, py) => {
             const adjacentPositions = [
-                { x: px, y: py - 1 },
-                { x: px, y: py + 1 },
-                { x: px - 1, y: py },
+                { x: px, y: py - 1 }, // Up
+                { x: px, y: py + 1 }, // Down
+                { x: px - 1, y: py }, // Left
                 { x: px + 1, y: py }, // Right
             ];
             const visValues = [];
@@ -98597,17 +98582,17 @@ const howler_1 = __webpack_require__(/*! howler */ "./node_modules/howler/dist/h
 class Sound {
     static detectMobile() {
         const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-        Sound.isMobile =
+        _a.isMobile =
             /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-        return Sound.isMobile;
+        return _a.isMobile;
     }
     static async enableAudioForMobile() {
-        if (Sound.audioContextResumed)
+        if (_a.audioContextResumed)
             return;
         try {
             if (howler_1.Howler.ctx && howler_1.Howler.ctx.state === "suspended") {
                 await howler_1.Howler.ctx.resume();
-                Sound.audioContextResumed = true;
+                _a.audioContextResumed = true;
                 console.log("AudioContext resumed");
             }
         }
@@ -98617,9 +98602,9 @@ class Sound {
     }
     static addMobileAudioHandlers() {
         const enableAudio = async () => {
-            await Sound.enableAudioForMobile();
-            if (Sound.audioMuted && reverb_1.ReverbEngine.initialized) {
-                Sound.audioMuted = false;
+            await _a.enableAudioForMobile();
+            if (_a.audioMuted && reverb_1.ReverbEngine.initialized) {
+                _a.audioMuted = false;
                 howler_1.Howler.mute(false);
             }
         };
@@ -98635,43 +98620,43 @@ class Sound {
         });
     }
     static toggleMute() {
-        Sound.audioMuted = !Sound.audioMuted;
-        if (Sound.audioMuted) {
+        _a.audioMuted = !_a.audioMuted;
+        if (_a.audioMuted) {
             howler_1.Howler.mute(true);
         }
         else {
             howler_1.Howler.mute(false);
-            if (Sound.isMobile) {
-                Sound.enableAudioForMobile();
+            if (_a.isMobile) {
+                _a.enableAudioForMobile();
             }
         }
     }
-    static playWithReverb(sound, priority = Sound.PRIORITY.INTERACTIONS) {
-        if (Sound.audioMuted)
+    static playWithReverb(sound, priority = _a.PRIORITY.INTERACTIONS) {
+        if (_a.audioMuted)
             return null;
         try {
             // Simple volume-based priority system
-            if (Sound.currentlyPlaying.size > 10 &&
-                priority < Sound.PRIORITY.COMBAT) {
+            if (_a.currentlyPlaying.size > 10 &&
+                priority < _a.PRIORITY.COMBAT) {
                 return null;
             }
             let soundId = null;
             // Always try to use reverb if available and not on mobile
-            if (reverb_1.ReverbEngine.initialized && !Sound.isMobile) {
+            if (reverb_1.ReverbEngine.initialized && !_a.isMobile) {
                 soundId = reverb_1.ReverbEngine.applyReverb(sound);
             }
             else {
                 soundId = sound.play();
             }
             if (soundId) {
-                Sound.currentlyPlaying.add(soundId);
+                _a.currentlyPlaying.add(soundId);
                 // Clean up tracking
                 sound.once("end", () => {
-                    Sound.currentlyPlaying.delete(soundId);
+                    _a.currentlyPlaying.delete(soundId);
                 });
                 // Fallback cleanup
                 setTimeout(() => {
-                    Sound.currentlyPlaying.delete(soundId);
+                    _a.currentlyPlaying.delete(soundId);
                 }, 5000);
             }
             return soundId;
@@ -98689,7 +98674,7 @@ class Sound {
         this.stopSound(sound);
     }
     static cleanup() {
-        Sound.currentlyPlaying.clear();
+        _a.currentlyPlaying.clear();
         howler_1.Howler.unload();
     }
 }
@@ -98713,15 +98698,15 @@ Sound.castleMusicId = null;
 Sound.underwaterMusicId = null;
 Sound.ambientSoundId = null;
 Sound.loadSounds = async () => {
-    if (Sound.initialized)
+    if (_a.initialized)
         return;
-    Sound.initialized = true;
-    Sound.detectMobile();
-    if (Sound.isMobile) {
-        Sound.addMobileAudioHandlers();
+    _a.initialized = true;
+    _a.detectMobile();
+    if (_a.isMobile) {
+        _a.addMobileAudioHandlers();
     }
     if (reverb_1.ReverbEngine.initialized) {
-        Sound.audioMuted = false;
+        _a.audioMuted = false;
     }
     // Optimized Howl creation - always use Web Audio API for better performance
     const createHowlArray = (basePath, indices, volume = 1.0, maxConcurrent = 3) => {
@@ -98730,7 +98715,7 @@ Sound.loadSounds = async () => {
                 src: [`${basePath}${i}.mp3`],
                 volume: volume,
                 preload: true,
-                html5: false,
+                html5: false, // Always use Web Audio API
                 pool: maxConcurrent,
             });
         });
@@ -98741,69 +98726,69 @@ Sound.loadSounds = async () => {
             volume: volume,
             preload: true,
             loop: loop,
-            html5: false,
+            html5: false, // Always use Web Audio API
             pool: maxConcurrent,
         });
     };
     try {
         // Load all sounds with optimized settings
-        Sound.magicSound = createHowl("res/SFX/attacks/magic2.mp3", 0.25, false, 3);
-        Sound.warHammerSound = createHowl("res/SFX/attacks/warhammer.mp3", 1, false, 3);
-        Sound.healSound = createHowl("res/SFX/items/powerup1.mp3", 0.5, false, 1);
-        Sound.eatSounds = createHowlArray("res/SFX/items/eat", [1, 2], 1.0, 5);
+        _a.magicSound = createHowl("res/SFX/attacks/magic2.mp3", 0.25, false, 3);
+        _a.warHammerSound = createHowl("res/SFX/attacks/warhammer.mp3", 1, false, 3);
+        _a.healSound = createHowl("res/SFX/items/powerup1.mp3", 0.5, false, 1);
+        _a.eatSounds = createHowlArray("res/SFX/items/eat", [1, 2], 1.0, 5);
         // Footstep sounds
-        Sound.playerStoneFootsteps = createHowlArray("res/SFX/footsteps/stone/footstep", [1, 2, 3], 1.0, 4);
-        Sound.playerGrassFootsteps = createHowlArray("res/SFX/footsteps/grass/footstep", [1, 2, 3, 6], 1.0, 4);
-        Sound.playerDirtFootsteps = createHowlArray("res/SFX/footsteps/dirt/footstep", [1, 2, 3, 4, 5], 1.0, 4);
-        Sound.enemyFootsteps = createHowlArray("res/SFX/footsteps/enemy/enemyfootstep", [1, 2, 3, 4, 5], 1.0, 4);
+        _a.playerStoneFootsteps = createHowlArray("res/SFX/footsteps/stone/footstep", [1, 2, 3], 1.0, 4);
+        _a.playerGrassFootsteps = createHowlArray("res/SFX/footsteps/grass/footstep", [1, 2, 3, 6], 1.0, 4);
+        _a.playerDirtFootsteps = createHowlArray("res/SFX/footsteps/dirt/footstep", [1, 2, 3, 4, 5], 1.0, 4);
+        _a.enemyFootsteps = createHowlArray("res/SFX/footsteps/enemy/enemyfootstep", [1, 2, 3, 4, 5], 1.0, 4);
         // Combat sounds
-        Sound.swingSounds = createHowlArray("res/SFX/attacks/swing", [1, 2, 3, 4], 0.5, 6);
-        Sound.hitSounds = createHowlArray("res/SFX/attacks/hurt", [1, 2, 3, 4], 0.5, 4);
-        Sound.hurtSounds = [createHowl("res/SFX/attacks/hit.mp3", 0.3, false, 0)];
-        Sound.sliceSound = createHowlArray("res/SFX/attacks/slice", [1, 2, 3], 0.5, 4);
-        Sound.shortSliceSound = createHowlArray("res/SFX/attacks/sliceShort", [1, 2, 3], 0.5, 4);
-        Sound.parrySounds = createHowlArray("res/SFX/attacks/parry", [1, 2], 0.5, 3);
-        Sound.gruntSounds = createHowlArray("res/SFX/attacks/grunt", [1], 0.35, 1);
+        _a.swingSounds = createHowlArray("res/SFX/attacks/swing", [1, 2, 3, 4], 0.5, 6);
+        _a.hitSounds = createHowlArray("res/SFX/attacks/hurt", [1, 2, 3, 4], 0.5, 4);
+        _a.hurtSounds = [createHowl("res/SFX/attacks/hit.mp3", 0.3, false, 0)];
+        _a.sliceSound = createHowlArray("res/SFX/attacks/slice", [1, 2, 3], 0.5, 4);
+        _a.shortSliceSound = createHowlArray("res/SFX/attacks/sliceShort", [1, 2, 3], 0.5, 4);
+        _a.parrySounds = createHowlArray("res/SFX/attacks/parry", [1, 2], 0.5, 3);
+        _a.gruntSounds = createHowlArray("res/SFX/attacks/grunt", [1], 0.35, 1);
         // Single sounds
-        Sound.enemySpawnSound = createHowl("res/SFX/attacks/enemyspawn.mp3", 0.7, false, 3);
-        Sound.wooshSounds = createHowlArray("res/SFX/attacks/woosh", [1, 2], 0.2, 3);
+        _a.enemySpawnSound = createHowl("res/SFX/attacks/enemyspawn.mp3", 0.7, false, 3);
+        _a.wooshSounds = createHowlArray("res/SFX/attacks/woosh", [1, 2], 0.2, 3);
         // Interaction sounds
-        Sound.chestSounds = createHowlArray("res/SFX/chest/chest", [1, 2, 3], 0.5, 3);
-        Sound.coinPickupSounds = createHowlArray("res/SFX/items/coins", [1, 2, 3, 4], 1.0, 5);
-        Sound.genericPickupSound = createHowl("res/SFX/items/pickup.mp3", 0.8, false, 3);
-        Sound.keyPickupSound = createHowl("res/SFX/items/keyPickup.mp3", 1.0, false, 2);
-        Sound.backpackSound = createHowl("res/SFX/items/backpack.mp3", 0.75, false, 2);
-        Sound.smithSound = createHowl("res/SFX/items/smith.mp3", 0.5, false, 2);
-        Sound.lockedSound = createHowl("res/SFX/door/locked1.mp3", 0.75, false, 2);
-        Sound.woodSound = createHowl("res/SFX/objects/woodHit1.mp3", 1.25, false, 2);
-        Sound.squishSound = createHowl("res/SFX/attacks/squish1.mp3", 0.75, false, 2);
-        Sound.crushSounds = createHowlArray("res/SFX/attacks/crush", [1, 2], 0.4, 2);
+        _a.chestSounds = createHowlArray("res/SFX/chest/chest", [1, 2, 3], 0.5, 3);
+        _a.coinPickupSounds = createHowlArray("res/SFX/items/coins", [1, 2, 3, 4], 1.0, 5);
+        _a.genericPickupSound = createHowl("res/SFX/items/pickup.mp3", 0.8, false, 3);
+        _a.keyPickupSound = createHowl("res/SFX/items/keyPickup.mp3", 1.0, false, 2);
+        _a.backpackSound = createHowl("res/SFX/items/backpack.mp3", 0.75, false, 2);
+        _a.smithSound = createHowl("res/SFX/items/smith.mp3", 0.5, false, 2);
+        _a.lockedSound = createHowl("res/SFX/door/locked1.mp3", 0.75, false, 2);
+        _a.woodSound = createHowl("res/SFX/objects/woodHit1.mp3", 1.25, false, 2);
+        _a.squishSound = createHowl("res/SFX/attacks/squish1.mp3", 0.75, false, 2);
+        _a.crushSounds = createHowlArray("res/SFX/attacks/crush", [1, 2], 0.4, 2);
         // Mining sounds
-        Sound.miningSounds = createHowlArray("res/SFX/resources/Pickaxe", [1, 2, 3, 4], 0.3, 3);
-        Sound.breakRockSound = createHowl("res/SFX/resources/rockbreak.mp3", 1.0, false, 2);
+        _a.miningSounds = createHowlArray("res/SFX/resources/Pickaxe", [1, 2, 3, 4], 0.3, 3);
+        _a.breakRockSound = createHowl("res/SFX/resources/rockbreak.mp3", 1.0, false, 2);
         // Door sounds
-        Sound.unlockSounds = createHowlArray("res/SFX/door/unlock", [1], 0.5, 2);
-        Sound.doorOpenSounds = createHowlArray("res/SFX/door/open", [1, 2], 0.5, 3);
+        _a.unlockSounds = createHowlArray("res/SFX/door/unlock", [1], 0.5, 2);
+        _a.doorOpenSounds = createHowlArray("res/SFX/door/open", [1, 2], 0.5, 3);
         // Object sounds
-        Sound.potSmashSounds = createHowlArray("res/SFX/objects/potSmash", [1, 2, 3], 0.5, 3);
-        Sound.bushSounds = createHowlArray("res/SFX/objects/plantHit", [1, 2], 0.75, 3);
-        Sound.pushSounds = createHowlArray("res/SFX/pushing/push", [1, 2], 1.0, 3);
-        Sound.fishingCastSounds = createHowlArray("res/SFX/fishing/cast", [1, 2], 0.5, 3);
-        Sound.fishingReelSound = createHowl("res/SFX/fishing/catch.mp3", 0.5, false, 2);
-        Sound.fishingCatchSounds = createHowlArray("res/SFX/fishing/splash", [1, 2], 0.85, 3);
+        _a.potSmashSounds = createHowlArray("res/SFX/objects/potSmash", [1, 2, 3], 0.5, 3);
+        _a.bushSounds = createHowlArray("res/SFX/objects/plantHit", [1, 2], 0.75, 3);
+        _a.pushSounds = createHowlArray("res/SFX/pushing/push", [1, 2], 1.0, 3);
+        _a.fishingCastSounds = createHowlArray("res/SFX/fishing/cast", [1, 2], 0.5, 3);
+        _a.fishingReelSound = createHowl("res/SFX/fishing/catch.mp3", 0.5, false, 2);
+        _a.fishingCatchSounds = createHowlArray("res/SFX/fishing/splash", [1, 2], 0.85, 3);
         // Bomb sounds
-        Sound.bombSounds = createHowlArray("res/SFX/attacks/explode", [1, 2], 0.7, 3);
-        Sound.fuseBurnSound = createHowl("res/SFX/attacks/fuse.mp3", 0.2, false, 2);
-        Sound.fuseLoopSound = createHowl("res/SFX/attacks/fuseLoop.mp3", 0.2, true, 1);
-        Sound.fuseStartSound = createHowl("res/SFX/attacks/fuseStart.mp3", 0.2, false, 2);
+        _a.bombSounds = createHowlArray("res/SFX/attacks/explode", [1, 2], 0.7, 3);
+        _a.fuseBurnSound = createHowl("res/SFX/attacks/fuse.mp3", 0.2, false, 2);
+        _a.fuseLoopSound = createHowl("res/SFX/attacks/fuseLoop.mp3", 0.2, true, 1);
+        _a.fuseStartSound = createHowl("res/SFX/attacks/fuseStart.mp3", 0.2, false, 2);
         // Ambient sounds - critical for mobile
-        Sound.forestMusic = createHowl("res/music/forest1.mp3", 0.25, true, 1);
-        Sound.caveMusic = createHowl("res/music/cave1.mp3", 0.25, true, 1);
-        Sound.castleMusic = createHowl("res/music/castle1.mp3", 0.25, true, 1);
-        Sound.underwaterMusic = createHowl("res/music/underwater1.mp3", 0.75, true, 1);
-        Sound.graveSound = createHowl("res/SFX/attacks/skelespawn.mp3", 1.0, false, 2);
-        Sound.ambientSound = createHowl("res/SFX/ambient/ambientDark2.mp3", 0.3, true, 1); // Reduced volume
-        Sound.goreSound = createHowl("res/SFX/Misc Unused/gore2.mp3", 0.5, false, 2);
+        _a.forestMusic = createHowl("res/music/forest1.mp3", 0.25, true, 1);
+        _a.caveMusic = createHowl("res/music/cave1.mp3", 0.25, true, 1);
+        _a.castleMusic = createHowl("res/music/castle1.mp3", 0.25, true, 1);
+        _a.underwaterMusic = createHowl("res/music/underwater1.mp3", 0.75, true, 1);
+        _a.graveSound = createHowl("res/SFX/attacks/skelespawn.mp3", 1.0, false, 2);
+        _a.ambientSound = createHowl("res/SFX/ambient/ambientDark2.mp3", 0.3, true, 1); // Reduced volume
+        _a.goreSound = createHowl("res/SFX/Misc Unused/gore2.mp3", 0.5, false, 2);
         console.log("All sounds loaded successfully");
     }
     catch (error) {
@@ -98811,126 +98796,126 @@ Sound.loadSounds = async () => {
     }
 };
 Sound.playerStoneFootstep = (environment) => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let sound = Sound.playerStoneFootsteps;
+    let sound = _a.playerStoneFootsteps;
     if (environment === 2)
-        sound = Sound.playerGrassFootsteps;
+        sound = _a.playerGrassFootsteps;
     if (environment === 1)
-        sound = Sound.playerDirtFootsteps;
+        sound = _a.playerDirtFootsteps;
     let f = game_1.Game.randTable(sound, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.FOOTSTEPS);
+    _a.playWithReverb(f, _a.PRIORITY.FOOTSTEPS);
 };
 Sound.enemyFootstep = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.enemyFootsteps, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.FOOTSTEPS);
+    let f = game_1.Game.randTable(_a.enemyFootsteps, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.FOOTSTEPS);
 };
 Sound.swing = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.swingSounds, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
+    let f = game_1.Game.randTable(_a.swingSounds, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.COMBAT);
 };
 Sound.hit = (hard = false) => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let sounds = Sound.hitSounds.slice(hard ? 2 : 0, hard ? 3 : 2);
+    let sounds = _a.hitSounds.slice(hard ? 2 : 0, hard ? 3 : 2);
     setTimeout(() => {
         let f = game_1.Game.randTable(sounds, Math.random);
-        _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
+        _a.playWithReverb(f, _a.PRIORITY.COMBAT);
     }, 100);
 };
 Sound.hurt = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.hurtSounds, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.CRITICAL);
+    let f = game_1.Game.randTable(_a.hurtSounds, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.CRITICAL);
 };
 Sound.enemySpawn = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    _a.playWithReverb(Sound.enemySpawnSound, Sound.PRIORITY.CRITICAL);
+    _a.playWithReverb(_a.enemySpawnSound, _a.PRIORITY.CRITICAL);
 };
 Sound.chest = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.chestSounds, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
+    let f = game_1.Game.randTable(_a.chestSounds, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.INTERACTIONS);
 };
 Sound.potSmash = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.potSmashSounds, Math.random);
-    _a.delayPlay(() => _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS), 100);
+    let f = game_1.Game.randTable(_a.potSmashSounds, Math.random);
+    _a.delayPlay(() => _a.playWithReverb(f, _a.PRIORITY.INTERACTIONS), 100);
 };
 Sound.pickupCoin = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.coinPickupSounds, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
+    let f = game_1.Game.randTable(_a.coinPickupSounds, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.INTERACTIONS);
 };
 Sound.mine = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.miningSounds, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
+    let f = game_1.Game.randTable(_a.miningSounds, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.INTERACTIONS);
 };
 Sound.breakRock = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
     setTimeout(() => {
-        _a.playWithReverb(Sound.breakRockSound, Sound.PRIORITY.INTERACTIONS);
+        _a.playWithReverb(_a.breakRockSound, _a.PRIORITY.INTERACTIONS);
     }, 100);
 };
 Sound.heal = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    _a.playWithReverb(Sound.healSound, Sound.PRIORITY.CRITICAL);
+    _a.playWithReverb(_a.healSound, _a.PRIORITY.CRITICAL);
 };
 Sound.genericPickup = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    _a.playWithReverb(Sound.genericPickupSound, Sound.PRIORITY.INTERACTIONS);
+    _a.playWithReverb(_a.genericPickupSound, _a.PRIORITY.INTERACTIONS);
 };
 Sound.keyPickup = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    _a.playWithReverb(Sound.keyPickupSound, Sound.PRIORITY.INTERACTIONS);
+    _a.playWithReverb(_a.keyPickupSound, _a.PRIORITY.INTERACTIONS);
 };
 Sound.push = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.pushSounds, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
+    let f = game_1.Game.randTable(_a.pushSounds, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.INTERACTIONS);
 };
 Sound.skeleSpawn = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
     // IMPORTANT: Original implementation set volume to 0.3 in this method
-    Sound.graveSound.volume(0.3);
-    _a.playWithReverb(Sound.graveSound, Sound.PRIORITY.CRITICAL);
+    _a.graveSound.volume(0.3);
+    _a.playWithReverb(_a.graveSound, _a.PRIORITY.CRITICAL);
 };
 Sound.unlock = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.unlockSounds, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
+    let f = game_1.Game.randTable(_a.unlockSounds, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.INTERACTIONS);
 };
 Sound.playCaveMusic = (index = 0) => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
     try {
         // Stop any existing forest music
-        if (Sound.caveMusicId) {
-            Sound.caveMusic.stop(Sound.caveMusicId);
+        if (_a.caveMusicId) {
+            _a.caveMusic.stop(_a.caveMusicId);
         }
         // Play new instance
-        Sound.caveMusicId = Sound.caveMusic.play();
+        _a.caveMusicId = _a.caveMusic.play();
         // Handle mobile audio context
-        if (Sound.isMobile && !Sound.audioContextResumed) {
-            Sound.enableAudioForMobile();
+        if (_a.isMobile && !_a.audioContextResumed) {
+            _a.enableAudioForMobile();
         }
     }
     catch (error) {
@@ -98938,18 +98923,18 @@ Sound.playCaveMusic = (index = 0) => {
     }
 };
 Sound.playForestMusic = (index = 0) => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
     try {
         // Stop any existing forest music
-        if (Sound.forestMusicId) {
-            Sound.forestMusic.stop(Sound.forestMusicId);
+        if (_a.forestMusicId) {
+            _a.forestMusic.stop(_a.forestMusicId);
         }
         // Play new instance
-        Sound.forestMusicId = Sound.forestMusic.play();
+        _a.forestMusicId = _a.forestMusic.play();
         // Handle mobile audio context
-        if (Sound.isMobile && !Sound.audioContextResumed) {
-            Sound.enableAudioForMobile();
+        if (_a.isMobile && !_a.audioContextResumed) {
+            _a.enableAudioForMobile();
         }
     }
     catch (error) {
@@ -98957,18 +98942,18 @@ Sound.playForestMusic = (index = 0) => {
     }
 };
 Sound.playCastleMusic = (index = 0) => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
     try {
         // Stop any existing castle music
-        if (Sound.castleMusicId) {
-            Sound.castleMusic.stop(Sound.castleMusicId);
+        if (_a.castleMusicId) {
+            _a.castleMusic.stop(_a.castleMusicId);
         }
         // Play new instance
-        Sound.castleMusicId = Sound.castleMusic.play();
+        _a.castleMusicId = _a.castleMusic.play();
         // Handle mobile audio context
-        if (Sound.isMobile && !Sound.audioContextResumed) {
-            Sound.enableAudioForMobile();
+        if (_a.isMobile && !_a.audioContextResumed) {
+            _a.enableAudioForMobile();
         }
     }
     catch (error) {
@@ -98976,18 +98961,18 @@ Sound.playCastleMusic = (index = 0) => {
     }
 };
 Sound.playUnderwaterMusic = (index = 0) => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
     try {
         // Stop any existing castle music
-        if (Sound.underwaterMusicId) {
-            Sound.underwaterMusic.stop(Sound.underwaterMusicId);
+        if (_a.underwaterMusicId) {
+            _a.underwaterMusic.stop(_a.underwaterMusicId);
         }
         // Play new instance
-        Sound.underwaterMusicId = Sound.underwaterMusic.play();
+        _a.underwaterMusicId = _a.underwaterMusic.play();
         // Handle mobile audio context
-        if (Sound.isMobile && !Sound.audioContextResumed) {
-            Sound.enableAudioForMobile();
+        if (_a.isMobile && !_a.audioContextResumed) {
+            _a.enableAudioForMobile();
         }
     }
     catch (error) {
@@ -98999,21 +98984,21 @@ Sound.stopMusic = () => {
     // Important: the prior implementation only stopped when forest/cave were active,
     // and never stopped underwater, which could leave tracks playing across transitions.
     try {
-        if (Sound.forestMusicId !== null) {
-            Sound.forestMusic.stop(Sound.forestMusicId);
-            Sound.forestMusicId = null;
+        if (_a.forestMusicId !== null) {
+            _a.forestMusic.stop(_a.forestMusicId);
+            _a.forestMusicId = null;
         }
-        if (Sound.caveMusicId !== null) {
-            Sound.caveMusic.stop(Sound.caveMusicId);
-            Sound.caveMusicId = null;
+        if (_a.caveMusicId !== null) {
+            _a.caveMusic.stop(_a.caveMusicId);
+            _a.caveMusicId = null;
         }
-        if (Sound.castleMusicId !== null) {
-            Sound.castleMusic.stop(Sound.castleMusicId);
-            Sound.castleMusicId = null;
+        if (_a.castleMusicId !== null) {
+            _a.castleMusic.stop(_a.castleMusicId);
+            _a.castleMusicId = null;
         }
-        if (Sound.underwaterMusicId !== null) {
-            Sound.underwaterMusic.stop(Sound.underwaterMusicId);
-            Sound.underwaterMusicId = null;
+        if (_a.underwaterMusicId !== null) {
+            _a.underwaterMusic.stop(_a.underwaterMusicId);
+            _a.underwaterMusicId = null;
         }
     }
     catch (error) {
@@ -99021,19 +99006,19 @@ Sound.stopMusic = () => {
     }
 };
 Sound.doorOpen = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.doorOpenSounds, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
+    let f = game_1.Game.randTable(_a.doorOpenSounds, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.INTERACTIONS);
 };
 Sound.playAmbient = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
     try {
         // Only play if not already playing
-        if (!Sound.ambientSoundId ||
-            !Sound.ambientSound.playing(Sound.ambientSoundId)) {
-            Sound.ambientSoundId = Sound.ambientSound.play();
+        if (!_a.ambientSoundId ||
+            !_a.ambientSound.playing(_a.ambientSoundId)) {
+            _a.ambientSoundId = _a.ambientSound.play();
         }
     }
     catch (error) {
@@ -99041,138 +99026,138 @@ Sound.playAmbient = () => {
     }
 };
 Sound.stopAmbient = () => {
-    if (Sound.ambientSoundId) {
-        Sound.ambientSound.stop(Sound.ambientSoundId);
-        Sound.ambientSoundId = null;
+    if (_a.ambientSoundId) {
+        _a.ambientSound.stop(_a.ambientSoundId);
+        _a.ambientSoundId = null;
     }
 };
 Sound.playFuse = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    Sound.fuseStartSound.play();
-    Sound.fuseStartSound.once("end", () => {
-        Sound.fuseLoopSound.play();
+    _a.fuseStartSound.play();
+    _a.fuseStartSound.once("end", () => {
+        _a.fuseLoopSound.play();
     });
 };
 Sound.stopFuse = () => {
-    Sound.fuseLoopSound.stop();
-    Sound.fuseStartSound.stop();
+    _a.fuseLoopSound.stop();
+    _a.fuseStartSound.stop();
 };
 Sound.playGore = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    _a.playWithReverb(Sound.goreSound, Sound.PRIORITY.COMBAT);
+    _a.playWithReverb(_a.goreSound, _a.PRIORITY.COMBAT);
 };
 Sound.playBomb = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.bombSounds, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.CRITICAL);
+    let f = game_1.Game.randTable(_a.bombSounds, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.CRITICAL);
 };
 Sound.playWarHammer = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
     _a.delayPlay(() => {
-        _a.playWithReverb(Sound.hitSounds[2], Sound.PRIORITY.COMBAT);
+        _a.playWithReverb(_a.hitSounds[2], _a.PRIORITY.COMBAT);
     }, 200);
 };
 Sound.playMagic = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    _a.playWithReverb(Sound.magicSound, Sound.PRIORITY.COMBAT);
-    let f = Sound.wooshSounds[0];
-    _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
+    _a.playWithReverb(_a.magicSound, _a.PRIORITY.COMBAT);
+    let f = _a.wooshSounds[0];
+    _a.playWithReverb(f, _a.PRIORITY.COMBAT);
 };
 Sound.playSlice = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.sliceSound, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
+    let f = game_1.Game.randTable(_a.sliceSound, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.COMBAT);
 };
 Sound.playShortSlice = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.shortSliceSound, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
+    let f = game_1.Game.randTable(_a.shortSliceSound, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.COMBAT);
 };
 Sound.playBackpack = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    _a.playWithReverb(Sound.backpackSound, Sound.PRIORITY.INTERACTIONS);
+    _a.playWithReverb(_a.backpackSound, _a.PRIORITY.INTERACTIONS);
 };
 Sound.playSmith = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    _a.playWithReverb(Sound.smithSound, Sound.PRIORITY.INTERACTIONS);
+    _a.playWithReverb(_a.smithSound, _a.PRIORITY.INTERACTIONS);
 };
 Sound.playBush = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.bushSounds, Math.random);
-    _a.delayPlay(() => _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS), 100);
+    let f = game_1.Game.randTable(_a.bushSounds, Math.random);
+    _a.delayPlay(() => _a.playWithReverb(f, _a.PRIORITY.INTERACTIONS), 100);
 };
 Sound.playParry = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.parrySounds, Math.random);
-    _a.delayPlay(() => _a.playWithReverb(f, Sound.PRIORITY.CRITICAL), 100);
+    let f = game_1.Game.randTable(_a.parrySounds, Math.random);
+    _a.delayPlay(() => _a.playWithReverb(f, _a.PRIORITY.CRITICAL), 100);
 };
 Sound.playEat = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.eatSounds, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
+    let f = game_1.Game.randTable(_a.eatSounds, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.INTERACTIONS);
 };
 Sound.playGrunt = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.gruntSounds, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
+    let f = game_1.Game.randTable(_a.gruntSounds, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.COMBAT);
 };
 Sound.playLocked = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    _a.playWithReverb(Sound.lockedSound, Sound.PRIORITY.INTERACTIONS);
+    _a.playWithReverb(_a.lockedSound, _a.PRIORITY.INTERACTIONS);
 };
 Sound.playWood = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
     _a.delayPlay(() => {
-        _a.playWithReverb(Sound.woodSound, Sound.PRIORITY.INTERACTIONS);
+        _a.playWithReverb(_a.woodSound, _a.PRIORITY.INTERACTIONS);
     }, 150);
 };
 Sound.playSquish = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    _a.playWithReverb(Sound.squishSound, Sound.PRIORITY.INTERACTIONS);
+    _a.playWithReverb(_a.squishSound, _a.PRIORITY.INTERACTIONS);
 };
 Sound.playFishingCast = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.fishingCastSounds, Math.random);
-    _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS);
+    let f = game_1.Game.randTable(_a.fishingCastSounds, Math.random);
+    _a.playWithReverb(f, _a.PRIORITY.INTERACTIONS);
 };
 Sound.playFishingReel = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    _a.playWithReverb(Sound.fishingReelSound, Sound.PRIORITY.INTERACTIONS);
+    _a.playWithReverb(_a.fishingReelSound, _a.PRIORITY.INTERACTIONS);
 };
 Sound.playFishingCatch = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let f = game_1.Game.randTable(Sound.fishingCatchSounds, Math.random);
-    _a.delayPlay(() => _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS), 100);
+    let f = game_1.Game.randTable(_a.fishingCatchSounds, Math.random);
+    _a.delayPlay(() => _a.playWithReverb(f, _a.PRIORITY.INTERACTIONS), 100);
 };
 Sound.playCrush = () => {
-    if (Sound.audioMuted)
+    if (_a.audioMuted)
         return;
-    let w = Sound.wooshSounds[1];
-    let f = Sound.crushSounds[1];
-    _a.playWithReverb(w, Sound.PRIORITY.COMBAT);
+    let w = _a.wooshSounds[1];
+    let f = _a.crushSounds[1];
+    _a.playWithReverb(w, _a.PRIORITY.COMBAT);
     _a.delayPlay(() => {
-        _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
+        _a.playWithReverb(f, _a.PRIORITY.COMBAT);
     }, 200);
-    _a.playWithReverb(w, Sound.PRIORITY.COMBAT);
+    _a.playWithReverb(w, _a.PRIORITY.COMBAT);
 };
 Sound.delayPlay = (method, delay) => {
     setTimeout(method, delay);
@@ -99501,14 +99486,14 @@ var DoorDir;
     DoorDir["East"] = "East";
     DoorDir["South"] = "South";
     DoorDir["West"] = "West";
-})(DoorDir = exports.DoorDir || (exports.DoorDir = {}));
+})(DoorDir || (exports.DoorDir = DoorDir = {}));
 var DoorType;
 (function (DoorType) {
     DoorType[DoorType["DOOR"] = 0] = "DOOR";
     DoorType[DoorType["LOCKEDDOOR"] = 1] = "LOCKEDDOOR";
     DoorType[DoorType["GUARDEDDOOR"] = 2] = "GUARDEDDOOR";
     DoorType[DoorType["TUNNELDOOR"] = 3] = "TUNNELDOOR";
-})(DoorType = exports.DoorType || (exports.DoorType = {}));
+})(DoorType || (exports.DoorType = DoorType = {}));
 class Door extends passageway_1.Passageway {
     constructor(room, game, x, y, doorDir, doorType) {
         super(room, game, x, y);
@@ -99917,14 +99902,13 @@ exports.Door = Door;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.findDoorwayOccupant = void 0;
+exports.findDoorwayOccupant = findDoorwayOccupant;
 /** Physical doorway occupancy, independent of generation assumptions and rendering. */
 function findDoorwayOccupant(entities, x, y, z, width = 1, height = 1) {
     return entities.find(entity => !entity.dead && entity.collidable !== false && (entity.z ?? 0) === z &&
         x < entity.x + Math.max(1, entity.w ?? 1) && x + width > entity.x &&
         y < entity.y + Math.max(1, entity.h ?? 1) && y + height > entity.y);
 }
-exports.findDoorwayOccupant = findDoorwayOccupant;
 
 
 /***/ }),
@@ -100318,7 +100302,7 @@ var LockType;
     LockType[LockType["LOCKED"] = 1] = "LOCKED";
     LockType[LockType["GUARDED"] = 2] = "GUARDED";
     LockType[LockType["TUNNEL"] = 3] = "TUNNEL";
-})(LockType = exports.LockType || (exports.LockType = {}));
+})(LockType || (exports.LockType = LockType = {}));
 class Lockable {
     constructor(game, config) {
         this.locked = false;
@@ -100851,7 +100835,7 @@ var SkinType;
     SkinType[SkinType["TUTORIAL"] = 10] = "TUTORIAL";
     SkinType[SkinType["FLOODED_CAVE"] = 11] = "FLOODED_CAVE";
     SkinType[SkinType["DARK_FOREST"] = 12] = "DARK_FOREST";
-})(SkinType = exports.SkinType || (exports.SkinType = {}));
+})(SkinType || (exports.SkinType = SkinType = {}));
 class Tile extends drawable_1.Drawable {
     constructor(room, x, y, z = 0) {
         super();
@@ -101952,7 +101936,7 @@ var astar;
     }
     AStar.NO_CHECK_START_POINT = false;
     astar_1.AStar = AStar;
-})(astar = exports.astar || (exports.astar = {}));
+})(astar || (exports.astar = astar = {}));
 
 
 /***/ }),
@@ -102139,7 +102123,8 @@ exports.getKeyColorForId = getKeyColorForId;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.applyPushChain = exports.computePushChain = void 0;
+exports.computePushChain = computePushChain;
+exports.applyPushChain = applyPushChain;
 function computePushChain(room, start, dx, dy) {
     let nextX = start.x + dx;
     let nextY = start.y + dy;
@@ -102169,7 +102154,6 @@ function computePushChain(room, start, dx, dy) {
     }
     return { chain, nextX, nextY, enemyEnd };
 }
-exports.computePushChain = computePushChain;
 function applyPushChain(room, start, chain, dx, dy, nextX, nextY, enemyEnd) {
     const behindTile = room.roomArray?.[nextX]?.[nextY];
     const canCrush = (behindTile && behindTile.canCrushEnemy?.()) || enemyEnd;
@@ -102212,7 +102196,6 @@ function applyPushChain(room, start, chain, dx, dy, nextX, nextY, enemyEnd) {
     start.markPushedMove();
     return true;
 }
-exports.applyPushChain = applyPushChain;
 
 
 /***/ }),
@@ -102501,7 +102484,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("8f94c80d349eda297cc4")
+/******/ 		__webpack_require__.h = () => ("ccf7a5608aec17d20aab")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */
