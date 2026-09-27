@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test \"tests/*.test.cjs\"",
     "test:horizon": "node training/horizon-tests.cjs",
+    "stage:web": "node scripts/stage-web-release.cjs",
     "dev": "npx http-server . -p 8080 -c-1 --cors",
     "read:db:csv": "cd server && npm run read:db:csv",
     "read:db:json": "cd server && npm run read:db:json"

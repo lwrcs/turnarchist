@@ -30,3 +30,14 @@ python -m unittest discover -s training/tests -p 'horizon*_tests.py'
 ```
 
 These focused suites do not replace a real-browser game check. See `electron/README.md` for desktop packaging and `documentation/agent-training.md` for agent compatibility. The current engineering checklist and validated results are in `documentation/engineering-stabilization-2026-09-27.md`.
+
+## Web release staging
+
+After the checks, stage a fresh production bundle and tracked web assets into a new directory outside the checkout:
+
+```sh
+npm run stage:web -- --out /path/to/new-stage
+npm run stage:web -- --verify /path/to/new-stage
+```
+
+The staging command refuses an existing destination or dirty source by default. Use `--allow-dirty` only for a diagnostic artifact. `release-manifest.json` records the source revision, package version, build inputs, and hashes of every staged file, including unbundled scripts and authored level images. Verification detects missing, extra, or changed files. It does not certify live gameplay or offline behavior; those remain separate release checks.
