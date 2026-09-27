@@ -9628,6 +9628,17 @@ function version(uuid) {
 
 /***/ }),
 
+/***/ "./package.json":
+/*!**********************!*\
+  !*** ./package.json ***!
+  \**********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = /*#__PURE__*/JSON.parse('{"name":"Turnarchist","version":"0.4.0","engines":{"node":">=22.23.2 <23"},"packageManager":"npm@10.9.8","description":"A turn-based roguelike dungeon crawler","main":"index.js","scripts":{"watch":"webpack --config webpack.config.js --watch","build":"webpack --mode production","typecheck":"tsc --noEmit","test":"node --test \\"tests/*.test.cjs\\"","test:horizon":"node training/horizon-tests.cjs","stage:web":"node scripts/stage-web-release.cjs","dev":"npx http-server . -p 8080 -c-1 --cors","read:db:csv":"cd server && npm run read:db:csv","read:db:json":"cd server && npm run read:db:json"},"repository":{"type":"git","url":"git+https://github.com/lwrcs/turnarchist.git"},"keywords":[],"author":"","license":"ISC","bugs":{"url":"https://github.com/lwrcs/turnarchist/issues"},"homepage":"https://github.com/lwrcs/turnarchist#readme","devDependencies":{"concurrently":"^8.2.1","prettier":"^3.4.1","ts-loader":"^8.4.0","typescript":"5.9.3","webpack":"^5.101.3","webpack-cli":"^4.10.0"},"dependencies":{"agent-base":"^6.0.2","axios":"^1.13.2","brace-expansion":"^2.0.1","combined-stream":"^1.0.8","core-util-is":"^1.0.3","create-error-class":"^3.0.2","crypto-random-string":"^3.3.1","debug":"^4.3.7","deep-extend":"^0.6.0","defaults":"^1.0.4","delayed-stream":"^1.0.0","detect-indent":"^6.1.0","dot-prop":"^6.0.1","duplexer3":"^0.1.5","electron-to-chromium":"^1.5.41","elegant-spinner":"^2.0.0","emojis-list":"^3.0.0","envinfo":"^7.14.0","errno":"^0.1.8","error-ex":"^1.3.2","escalade":"^3.2.0","escape-string-regexp":"^4.0.0","esrecurse":"^4.3.0","estraverse":"^5.3.0","exit-hook":"^2.2.1","extend":"^3.0.2","find-up":"^5.0.0","form-data":"^3.0.2","fs.realpath":"^1.0.0","function-bind":"^1.1.2","get-stream":"^6.0.1","glob-to-regexp":"^0.4.1","global-dirs":"^2.1.0","graceful-fs":"^4.2.11","has":"^1.0.4","has-ansi":"^4.0.1","has-flag":"^4.0.0","has-unicode":"^2.0.1","howler":"^2.2.4","http-proxy-agent":"^4.0.1","https-proxy-agent":"^5.0.1","human-signals":"^2.1.0","import-lazy":"^4.0.0","imurmurhash":"^0.1.4","inherits":"^2.0.4","ini":"^1.3.8","invariant":"^2.2.4","is-arrayish":"^0.3.2","is-ci":"^2.0.0","is-core-module":"^2.15.1","is-fullwidth-code-point":"^3.0.0","is-installed-globally":"^0.3.2","is-npm":"^5.0.0","is-obj":"^2.0.0","is-path-inside":"^3.0.3","is-plain-obj":"^3.0.0","is-redirect":"^1.0.0","is-retry-allowed":"^1.2.0","is-stream":"^2.0.1","is-windows":"^1.0.2","isarray":"^2.0.5","isexe":"^2.0.0","isobject":"^4.0.0","jest-worker":"^26.6.2","js-tokens":"^6.0.0","json5":"^2.2.3","listify":"^1.0.3","locate-path":"^6.0.0","lodash":"^4.17.21","loose-envify":"^1.4.0","lowercase-keys":"^2.0.0","make-dir":"^3.1.0","make-error":"^1.3.6","make-error-cause":"^2.3.0","merge-stream":"^2.0.0","mime-db":"^1.53.0","mime-types":"^2.1.35","mimic-fn":"^3.1.0","minimatch":"^3.1.2","minimist":"^1.2.8","mkdirp":"^1.0.4","ms":"^2.1.3","node-releases":"^1.1.77","nopt":"^5.0.0","npm-run-path":"^4.0.1","object-assign":"^4.1.1","object.pick":"^1.3.0","onetime":"^5.1.2","p-finally":"^2.0.1","p-limit":"^3.1.0","p-locate":"^5.0.0","p-try":"^2.2.0","parse-json":"^5.2.0","path-exists":"^4.0.0","path-is-absolute":"^1.0.1","path-is-inside":"^1.0.2","path-key":"^3.1.1","path-parse":"^1.0.7","pify":"^5.0.0","pkg-dir":"^5.0.0","prepend-http":"^3.0.1","process-nextick-args":"^2.0.1","promise-finally":"^3.0.1","prr":"^1.0.1","pseudomap":"^1.0.2","psl":"^1.9.0","punycode":"^2.3.1","reduce-flatten":"^3.0.1","ua-parser-js":"^2.0.4","uuid":"^13.0.0","zod":"^4.1.3"}}');
+
+/***/ }),
+
 /***/ "./res/font.png":
 /*!**********************!*\
   !*** ./res/font.png ***!
@@ -31013,8 +31024,7 @@ class Game {
         this.keyboardHeightPx = 0;
         this.hasRecordedStats = false;
         this.loadedFromSaveFile = false;
-        // Reference package.json
-        this.version = "0.4.0";
+        this.version = gameConstants_1.GameConstants.GAME_VERSION;
         this.loginMessage = "";
         this.prevIsMobile = null;
         /**
@@ -41399,6 +41409,7 @@ const weaponPlague_1 = __webpack_require__(/*! ../item/usable/weaponPlague */ ".
 const weaponEthereal_1 = __webpack_require__(/*! ../item/usable/weaponEthereal */ "./src/item/usable/weaponEthereal.ts");
 const scroll_1 = __webpack_require__(/*! ../item/usable/scroll */ "./src/item/usable/scroll.ts");
 const emeraldRing_1 = __webpack_require__(/*! ../item/jewelry/emeraldRing */ "./src/item/jewelry/emeraldRing.ts");
+const package_json_1 = __webpack_require__(/*! ../../package.json */ "./package.json");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -41430,7 +41441,8 @@ class GameConstants {
     }
 }
 exports.GameConstants = GameConstants;
-GameConstants.VERSION = "Alpha v0.4.0"; //"v0.6.3";
+GameConstants.GAME_VERSION = package_json_1.version;
+GameConstants.VERSION = `Alpha v${package_json_1.version}`;
 GameConstants.DEVELOPER_MODE = false;
 GameConstants.CLAUDE_ENABLED = false;
 GameConstants.INVENTORY_SNAP_COLS = false;
@@ -102484,7 +102496,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("ccf7a5608aec17d20aab")
+/******/ 		__webpack_require__.h = () => ("4a792e89cda56f13688c")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

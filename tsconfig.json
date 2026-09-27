@@ -5,6 +5,7 @@
     "target": "es2020",
     "sourceMap": true,
     "skipLibCheck": true,
+    "resolveJsonModule": true,
 
     "lib": ["es2015", "dom"],
     //"inlineSources": true,

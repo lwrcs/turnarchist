@@ -75,9 +75,11 @@ import {
   PlusScroll,
 } from "../item/usable/scroll";
 import { EmeraldRing } from "../item/jewelry/emeraldRing";
+import { version as gameVersion } from "../../package.json";
 
 export class GameConstants {
-  static readonly VERSION = "Alpha v0.4.0"; //"v0.6.3";
+  static readonly GAME_VERSION = gameVersion;
+  static readonly VERSION = `Alpha v${gameVersion}`;
   static DEVELOPER_MODE = false;
   static CLAUDE_ENABLED = false;
   static INVENTORY_SNAP_COLS = false;

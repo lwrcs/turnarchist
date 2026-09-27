@@ -736,8 +736,7 @@ export class Game {
   gameStartTimeMs: number;
   hasRecordedStats: boolean = false;
   loadedFromSaveFile: boolean = false;
-  // Reference package.json
-  version = "0.4.0";
+  version = GameConstants.GAME_VERSION;
 
   static inputReceived = false;
 

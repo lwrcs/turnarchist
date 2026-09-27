@@ -48,7 +48,7 @@ log(`packaging platform=${platform} arch=${arch}`);
 packager({
   dir: electronDir,
   name: "Turnarchist",
-  appVersion: require("./package.json").version,
+  appVersion: require("../package.json").version,
   platform,
   arch,
   out: path.join(electronDir, "dist"),
