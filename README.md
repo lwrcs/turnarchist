@@ -31,6 +31,14 @@ python -m unittest discover -s training/tests -p 'horizon*_tests.py'
 
 These focused suites do not replace a real-browser game check. See `electron/README.md` for desktop packaging and `documentation/agent-training.md` for agent compatibility. The current engineering checklist and validated results are in `documentation/engineering-stabilization-2026-09-27.md`.
 
+In the Playwright environment described in `training/README.md`, run the existing four-case browser continuation gate with a new, persistent report path:
+
+```sh
+python training/horizon_smoke.py --out /absolute/new/horizon-report.json
+```
+
+The validator uses a loopback server and an installed Chromium binary; it does not download a browser. Keep the report outside the checkout so case evidence survives and does not enter a release build.
+
 ## Web release staging
 
 After the checks, stage a fresh production bundle and tracked web assets into a new directory outside the checkout:
