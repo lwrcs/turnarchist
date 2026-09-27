@@ -43,3 +43,21 @@ npm run stage:web -- --verify /path/to/new-stage
 The staging command refuses an existing destination or dirty source by default. Use `--allow-dirty` only for a diagnostic artifact. `release-manifest.json` records the source revision, package version, default gameplay settings identity, build inputs, and hashes of every staged file, including unbundled scripts and authored level images. Verification detects missing, extra, or changed files. It does not certify live gameplay or offline behavior; those remain separate release checks.
 
 The root `package.json` version is the game release version. The in-game label, agent contract, and packaged Electron app derive their game version from it. Save, replay, generation, observation/action, planning, and model schema versions are separate compatibility boundaries. `electron/package.json` describes the private wrapper package and is not used for the packaged game's version.
+
+## Separate packages
+
+The dashboard, server, bot, and Electron wrapper each have their own lockfile. Install them separately before checking them. Safe local checks from the repository root are:
+
+```sh
+npm ci --prefix react/metrics
+npm --prefix react/metrics run check-types
+npm --prefix react/metrics run lint
+npm --prefix react/metrics run build
+npm ci --prefix server
+npm ci --prefix bot
+node node_modules/typescript/bin/tsc --project server/tsconfig.json --noEmit
+node node_modules/typescript/bin/tsc --project bot/tsconfig.json --noEmit
+node electron/build.js
+```
+
+The server and bot commands above only check types; their start scripts connect to external services. Electron staging builds `electron/app/` but does not launch or package the application.

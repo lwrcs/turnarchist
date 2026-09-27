@@ -1,5 +1,3 @@
-export const noop: (..._args: any[]) => any = () => {};
-
 export const delayed = <T>(value: T, delayMs: number): Promise<T> => {
   return new Promise((resolve) => {
     setTimeout(() => resolve(value), delayMs);

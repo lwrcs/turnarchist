@@ -6,6 +6,10 @@
     "target": "es2022",
     "module": "commonjs",
     "moduleResolution": "node",
+    "baseUrl": "..",
+    "paths": {
+      "@server/*": ["server/src/*"]
+    },
     "noImplicitAny": true,
     "resolveJsonModule": true
   },

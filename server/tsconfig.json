@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
     "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
