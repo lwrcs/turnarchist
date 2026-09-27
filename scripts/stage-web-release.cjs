@@ -40,6 +40,41 @@ function fileRecord(directory, relative) {
   return {path: relative, bytes: bytes.length, sha256: sha(bytes)};
 }
 
+function staticLiterals(relative, className, requireAll = false) {
+  const ts = require('typescript');
+  const source = ts.createSourceFile(relative, fs.readFileSync(path.join(root, relative), 'utf8'),
+    ts.ScriptTarget.Latest, true);
+  const declaration = source.statements.find(statement => ts.isClassDeclaration(statement) &&
+    statement.name?.text === className);
+  if (!declaration) throw new Error(`Missing ${className} in ${relative}`);
+  const values = {};
+  for (const member of declaration.members) {
+    if (!ts.isPropertyDeclaration(member) ||
+        !member.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.StaticKeyword)) continue;
+    if (!ts.isIdentifier(member.name)) throw new Error(`Computed ${className} setting`);
+    const value = member.initializer;
+    if (value?.kind === ts.SyntaxKind.TrueKeyword) values[member.name.text] = true;
+    else if (value?.kind === ts.SyntaxKind.FalseKeyword) values[member.name.text] = false;
+    else if (value && ts.isNumericLiteral(value)) values[member.name.text] = Number(value.text);
+    else if (value && ts.isStringLiteral(value)) values[member.name.text] = value.text;
+    else if (requireAll) throw new Error(`Non-literal default: ${className}.${member.name.text}`);
+  }
+  return values;
+}
+
+function defaultSettingsId() {
+  const gameplay = staticLiterals('src/game/gameplaySettings.ts', 'GameplaySettings', true);
+  const constants = staticLiterals('src/game/gameConstants.ts', 'GameConstants');
+  for (const name of ['DEVELOPER_MODE', 'ANIMATION_SPEED', 'SLOW_INPUTS_NEAR_ENEMIES']) {
+    if (!(name in constants)) throw new Error(`Missing literal GameConstants.${name}`);
+  }
+  return JSON.stringify(Object.entries({...gameplay,
+    developerMode: constants.DEVELOPER_MODE,
+    animationSpeed: constants.ANIMATION_SPEED,
+    slowInputsNearEnemies: constants.SLOW_INPUTS_NEAR_ENEMIES,
+  }).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0));
+}
+
 function isWebFile(relative) {
   if (/^(res|help|wiki)\//.test(relative)) return true;
   if (relative.includes('/')) return false;
@@ -136,6 +171,7 @@ async function stage(directory, allowDirty) {
     build: {
       node: process.version,
       typescript: require(path.join(root, 'node_modules/typescript/package.json')).version,
+      defaultSettingsId: defaultSettingsId(),
       inputs: ['package.json', 'package-lock.json', 'webpack.config.js',
         'src/game/gameConstants.ts', 'src/game/gameplaySettings.ts'].map(relative => fileRecord(root, relative)),
     },
@@ -157,5 +193,5 @@ if ((mode !== '--out' && mode !== '--verify') || !value ||
 } else if (mode === '--verify') {
   try { verify(path.resolve(value)); } catch (error) { console.error(error.message); process.exitCode = 1; }
 } else {
-  stage(value, extra === '--allow-dirty').catch(error => { console.error(error); process.exitCode = 1; });
+  stage(value, extra === '--allow-dirty').catch(error => { console.error(error.message); process.exitCode = 1; });
 }

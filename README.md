@@ -40,4 +40,4 @@ npm run stage:web -- --out /path/to/new-stage
 npm run stage:web -- --verify /path/to/new-stage
 ```
 
-The staging command refuses an existing destination or dirty source by default. Use `--allow-dirty` only for a diagnostic artifact. `release-manifest.json` records the source revision, package version, build inputs, and hashes of every staged file, including unbundled scripts and authored level images. Verification detects missing, extra, or changed files. It does not certify live gameplay or offline behavior; those remain separate release checks.
+The staging command refuses an existing destination or dirty source by default. Use `--allow-dirty` only for a diagnostic artifact. `release-manifest.json` records the source revision, package version, default gameplay settings identity, build inputs, and hashes of every staged file, including unbundled scripts and authored level images. Verification detects missing, extra, or changed files. It does not certify live gameplay or offline behavior; those remain separate release checks.
