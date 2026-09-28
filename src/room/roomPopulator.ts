@@ -2862,9 +2862,7 @@ export class Populator {
     return true;
   }
 
-  /**
-   * Clear floor tiles for big enemies (preserves existing logic)
-   */
+  /** Clear floor tiles and entities occupying a big enemy's footprint. */
   private clearFloorForBigEnemy(
     room: Room,
     x: number,
@@ -2886,7 +2884,7 @@ export class Populator {
         }
         if (displaced.length > 0) {
           room.entities = room.entities.filter(
-            (e) => (e.x !== x + xx && e.y !== y + yy) || e === enemy,
+            (e) => (e.x !== x + xx || e.y !== y + yy) || e === enemy,
           );
         }
       }
