@@ -56,4 +56,9 @@ This is the working task list for the [engineering audit](https://chatgpt.com/c/
 - [ ] Finish evaluating the pinned TypeScript 5.9.3 candidate against Electron and other package paths; clean install, full typecheck, root/Horizon Node suites, WSL Python suites, Webpack production build, and a served browser startup/action smoke pass. Assess Node upgrades separately later.
 - [ ] Consider Vite only if a measured workflow problem remains after release staging and test entry points. Keep Webpack as the reference until output and gameplay parity are demonstrated.
 
+## New work to scope — priority not assigned
+
+- [ ] Add user accounts that can hold multiple saved games and player statistics. Evaluate Clerk for Google, Apple, and other sign-in methods; establish the required server and database. Preserve cookie-based saves for guests. Define and verify how authenticated saves advance so an older save cannot be reused as a checkpoint, including behavior across devices and guest-to-account migration.
+- [ ] Design a content-change validation system, potentially run during the build. When an enemy or other content is added or changed, check its required save/load handling and related integrations such as Horizon and the bestiary. Make automatable coverage checks explicit, and emit build warnings for required review that cannot be verified automatically.
+
 Update a checkbox only when its stated checks have run on the named revision. Record failed checks instead of adding assertions that merely mirror implementation.
