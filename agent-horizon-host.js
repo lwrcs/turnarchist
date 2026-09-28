@@ -102,6 +102,11 @@
     if (typeof source !== 'function') throw new TypeError('source must return the live window.agent');
     if (!Number.isSafeInteger(stepTimeoutMs) || stepTimeoutMs < 1 || stepTimeoutMs > 60000) throw new TypeError('Invalid stepTimeoutMs');
     if (!Number.isSafeInteger(settlementTimeoutMs) || settlementTimeoutMs < stepTimeoutMs || settlementTimeoutMs > 60000) throw new TypeError('Invalid settlementTimeoutMs');
+    // Cave diagnostic reconstruction replays from the seed. A room transition plus
+    // its initial ladder handoff took 3.3 seconds in a real browser even though
+    // engine update work was only milliseconds. Keep ordinary steps at 3 seconds.
+    const restoreBudget = view => view?.scenario === 'cave'
+      ? Math.max(stepTimeoutMs, 5000) : stepTimeoutMs;
     if (!simulator) {
       const Base = getBase();
       if (!Base?.IsolatedSimulator) throw new Error('Load agent-simulation-host.js before creating the host');
@@ -238,7 +243,7 @@
             let restoredView = null;
             try {
               if (loadedIdentity !== current.identity) {
-                await bounded(() => agent.restorePlanningSnapshot(current.snapshot.serialized), own.signal, stepTimeoutMs, 'restore');
+                await bounded(() => agent.restorePlanningSnapshot(current.snapshot.serialized), own.signal, restoreBudget(current.view), 'restore');
                 restoredView = clone(agent.observe());
                 assertViewIdentity(current.view, restoredView, 'branch.restore');
                 loadedIdentity = current.identity;
@@ -312,7 +317,7 @@
           const agent = await readyChild(); unchanged();
           const start = Date.now(); let restoredView = null;
           try {
-            await bounded(() => agent.restorePlanningSnapshot(root.snapshot.serialized), own.signal, stepTimeoutMs, 'root-restore');
+            await bounded(() => agent.restorePlanningSnapshot(root.snapshot.serialized), own.signal, restoreBudget(root.view), 'root-restore');
             restoredView = clone(agent.observe());
             assertViewIdentity(root.view, restoredView, 'root.restore');
             loadedIdentity = root.identity;
