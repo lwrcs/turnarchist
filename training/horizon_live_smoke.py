@@ -20,9 +20,12 @@ def main() -> int:
     parser.add_argument('--chromium')
     parser.add_argument('--multi-room',action='store_true',help='Require a verified action in a second distinct room without changing controller limits')
     parser.add_argument('--continuation',action='store_true',help='Reproduce the viewer settings: 20 actions, depth 17, 128 simulations; unchanged time limits')
+    parser.add_argument('--parity',action='store_true',help='Check two real actions against restored planning snapshots')
     parser.add_argument('--seeds',nargs='+',type=int,default=[1])
     parser.add_argument('--scenarios',nargs='+',choices=['standard','cave','forest'],default=['standard'])
     args=parser.parse_args()
+    if sum([args.continuation, args.multi_room, args.parity])>1:
+        parser.error('Select only one focused browser suite.')
     if args.continuation and (args.multi_room or args.seeds != [1] or args.scenarios != ['standard']):
         parser.error('The continuation regression is the reported standard seed-1 exit route; run other suites separately.')
     root=Path(__file__).resolve().parents[1]
@@ -33,7 +36,7 @@ def main() -> int:
     if len(set(args.seeds))!=len(args.seeds) or len(set(args.scenarios))!=len(args.scenarios) or any(not 0<=s<=0xffffffff for s in args.seeds) or len(args.seeds)*len(args.scenarios)>64:
         parser.error('Unique unsigned seeds/scenarios and at most 64 cases are required.')
     cases.mkdir(parents=True)
-    report={'suite':'horizon-continuation-browser-v1' if args.continuation else 'horizon-rooms-browser-v1' if args.multi_room else 'horizon-live-browser-v1','actualGame':True,'pass':False,'runs':[],
+    report={'suite':'horizon-planning-continuation-browser-v1' if args.parity else 'horizon-continuation-browser-v1' if args.continuation else 'horizon-rooms-browser-v1' if args.multi_room else 'horizon-live-browser-v1','actualGame':True,'pass':False,'runs':[],
             'coverage':{'seeds':args.seeds,'scenarios':args.scenarios},'python':sys.version}
     server=None
     try:
@@ -45,7 +48,7 @@ def main() -> int:
                 with contextlib.suppress(BrokenPipeError,ConnectionResetError):super().copyfile(src,dst)
         server=ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Handler,directory=str(root)))
         thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
-        entry='horizon-continuation-validation.html' if args.continuation else 'horizon-room-validation.html' if args.multi_room else 'horizon-live-validation.html'
+        entry='training/horizon-parity-validation.html' if args.parity else 'horizon-continuation-validation.html' if args.continuation else 'horizon-room-validation.html' if args.multi_room else 'horizon-live-validation.html'
         for scenario in args.scenarios:
             for seed in args.seeds:
                 directory=cases/f'{scenario}-{seed}';directory.mkdir()
@@ -58,7 +61,7 @@ def main() -> int:
         report['error']={'name':type(error).__name__,'message':str(error)}
     finally:
         if server:server.shutdown();server.server_close()
-        paths=['src/game/agentEnvironment.ts','src/game/agentPlanningWarnings.ts','src/game/agentPlanningInteraction.ts','src/game/agentPlanningPaths.ts','src/game/agentPlanningEmptyLoot.ts','src/game/agentPlanningAttachedLoot.ts','src/game/agentPlanningResources.ts','src/game/agentPlanningSpawners.ts','agent-horizon-host.js','agent-horizon-controller.js','agent-horizon-goals.js','training/horizon-live-smoke.js','training/horizon-room-smoke.js','training/horizon-continuation-smoke.js']
+        paths=['src/game/agentEnvironment.ts','src/game/agentPlanningWarnings.ts','src/game/agentPlanningInteraction.ts','src/game/agentPlanningPaths.ts','src/game/agentPlanningEmptyLoot.ts','src/game/agentPlanningAttachedLoot.ts','src/game/agentPlanningResources.ts','src/game/agentPlanningSpawners.ts','agent-horizon-host.js','agent-horizon-controller.js','agent-horizon-goals.js','training/horizon-live-smoke.js','training/horizon-room-smoke.js','training/horizon-continuation-smoke.js','training/horizon-parity-smoke.js']
         sources=[]
         for name in paths:
             file=root/name
