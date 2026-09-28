@@ -46,6 +46,11 @@ class RunnerTests(unittest.TestCase):
     def test_nonzero_exit_invalidates_even_successful_worker_report(self):
         r=self.worker("Path(r['result']).write_text(json.dumps({'seed':1,'scenario':'cave','pass':True}));sys.exit(7)")
         self.assertFalse(r['pass']);self.assertEqual(r['error']['code'],'SMOKE_WORKER_EXIT')
+    def test_large_failed_result_preserves_the_actual_error(self):
+        body="Path(r['result']).write_text(json.dumps({'seed':1,'scenario':'cave','pass':False,'error':{'code':'PLANNING_OPERATION_TIMEOUT','path':'/simulator/root-restore'},'diagnostic':'x'*2400000}));sys.exit(1)"
+        r=self.worker(body)
+        self.assertFalse(r['pass']);self.assertEqual(r['error']['code'],'PLANNING_OPERATION_TIMEOUT')
+        self.assertEqual(r['error']['path'],'/simulator/root-restore');self.assertEqual(r['workerExitCode'],1)
     def test_process_watchdog_retains_progress(self):
         event=json.dumps(self.event())+'\n'
         r=self.worker("Path(r['journal']).write_text("+repr(event)+");time.sleep(30)")

@@ -54,6 +54,7 @@ def json_safe(value):
 # the parent's deadline or erase progress already flushed to the external journal.
 PROGRESS_PREFIX = 'HORIZON_SMOKE_PROGRESS_V3 '
 MAX_EVENT_BYTES = 262144
+MAX_RESULT_BYTES = 8 * 1024 * 1024  # Match the coordinator's bounded browser-report reader.
 
 
 def write_new(file: Path, value):
@@ -273,7 +274,7 @@ def execute_case(request, directory, worker_command=None):
             stop_owned_worker(process)
             latest = read_latest(Path(request['journal']))
             result_file = Path(request['result'])
-            if result_file.is_file() and result_file.stat().st_size <= 2097152:
+            if result_file.is_file() and result_file.stat().st_size <= MAX_RESULT_BYTES:
                 try:
                     terminal = json.loads(result_file.read_text(encoding='utf8'))
                     if isinstance(terminal, dict) and terminal.get('seed') == request['seed'] and terminal.get('scenario') == request['scenario'] and terminal.get('pass') is False:
@@ -290,7 +291,7 @@ def execute_case(request, directory, worker_command=None):
                 stop_owned_worker(process)
             raise
     result_file = Path(request['result'])
-    if result_file.is_file() and result_file.stat().st_size <= 2097152:
+    if result_file.is_file() and result_file.stat().st_size <= MAX_RESULT_BYTES:
         try:
             result = json.loads(result_file.read_text(encoding='utf8'))
             if not isinstance(result, dict) or not isinstance(result.get('pass'), bool) or result.get('seed') != request['seed'] or result.get('scenario') != request['scenario']:
