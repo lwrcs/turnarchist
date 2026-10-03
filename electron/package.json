@@ -6,6 +6,7 @@
   "private": true,
   "scripts": {
     "build-app": "node build.js",
+    "test": "node --test tests/*.test.cjs",
     "start": "npm run build-app && electron .",
     "pack:win": "node pack.js win32 x64",
     "pack:mac": "node pack.js darwin x64",

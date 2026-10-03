@@ -14,7 +14,7 @@
   </script>
 
   <link rel="icon" href="res/favicon.png" />
-  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#000000" />
 
   <meta charset="UTF-8" />
@@ -275,7 +275,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js');
+        navigator.serviceWorker.register('./service-worker.js');
       });
     }
   </script>

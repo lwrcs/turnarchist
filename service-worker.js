@@ -1,4 +1,4 @@
-const CACHE_NAME = "turnarchist-v2";
+const CACHE_NAME = "turnarchist-v3";
 
 // Use relative URLs so this also works when hosted under a sub-path (e.g. GitHub Pages project sites).
 const PRECACHE_URLS = [
@@ -9,72 +9,55 @@ const PRECACHE_URLS = [
   "./pagestyle.css",
   "./manifest.webmanifest",
   "./res/favicon.png",
+  "./replay-diagnostics.js",
+  "./dist/bundle.js",
 ];
 
 self.addEventListener("install", (event) => {
-  self.skipWaiting();
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)));
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
-      // Clear old cache versions so updated HTML (like help pages) isn't stuck.
       const keys = await caches.keys();
-      await Promise.all(keys.map((k) => (k === CACHE_NAME ? Promise.resolve() : caches.delete(k))));
+      await Promise.all(keys.filter((k) => k.startsWith("turnarchist-") && k !== CACHE_NAME)
+        .map((k) => caches.delete(k)));
       await self.clients.claim();
     })(),
   );
 });
 
 self.addEventListener("fetch", (event) => {
-  // Only cache GET requests and static assets
-  if (event.request.method !== "GET") {
-    return;
+  const request = event.request;
+  if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) return;
+
+  // The map loader appends timestamps. These routes serve static bytes, so a
+  // stable key permits offline loads without collapsing query-sensitive URLs.
+  const key = new URL(request.url);
+  if (request.mode === "navigate" || /\/res\/levels\/.*\.png$/.test(key.pathname)) {
+    key.search = "";
   }
-
-  const accept = event.request.headers.get("accept") || "";
-  const isHTML =
-    event.request.mode === "navigate" ||
-    accept.includes("text/html") ||
-    accept.includes("application/xhtml+xml");
-
-  // HTML/navigation should be network-first so updated pages (e.g. help) show immediately.
-  if (isHTML) {
-    event.respondWith(
-      (async () => {
+  key.hash = "";
+  event.respondWith((async () => {
+    try {
+      const response = await fetch(request);
+      if (response.status === 200) {
         try {
-          const response = await fetch(event.request);
-          if (response && response.status === 200) {
-            const copy = response.clone();
-            const cache = await caches.open(CACHE_NAME);
-            cache.put(event.request, copy);
-          }
-          return response;
-        } catch (err) {
-          const cached = await caches.match(event.request);
-          if (cached) return cached;
-          throw err;
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(key.href, response.clone());
+        } catch (error) {
+          // Cache storage can be unavailable or full; keep the network response usable.
+          console.warn("Could not cache asset", key.href, error);
         }
-      })(),
-    );
-    return;
-  }
-
-  // Static assets: cache-first.
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return (
-        cached ||
-        fetch(event.request).then((response) => {
-          // Only cache successful responses
-          if (response && response.status === 200) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-      );
-    }),
-  );
+      }
+      return response;
+    } catch (error) {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(key.href);
+      if (cached) return cached;
+      throw error;
+    }
+  })());
 });

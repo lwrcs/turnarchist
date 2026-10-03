@@ -25,7 +25,7 @@ The parent repo must have had `npm install` run at least once so `../node_module
 electron/
 ├── package.json                 # separate — declares electron, @electron/packager
 ├── main.js                      # Electron main process
-├── preload.js                   # empty; exists for contextIsolation hygiene
+├── preload.js                   # scoped, atomic file-backed save bridge
 ├── play.electron.html           # Electron entrypoint HTML (committed)
 ├── webpack.electron.config.js   # webpack config for the Electron bundle
 ├── build.js                     # stages everything into app/
@@ -73,7 +73,7 @@ It keeps the `<canvas id="gameCanvas">`, the viewport meta, `theme-color`, and t
 
 ### Storage under `file://`
 
-`src/utility/cookies.ts` already falls back to `localStorage` when `document.cookie` is unavailable. Electron's `file://` renderer blocks cookies by default, so the fallback engages automatically. No changes needed in `src/`.
+The Electron renderer uses the `electronSave` preload bridge before the browser's cookie/localStorage path. The bridge stores `autosave.json` under Electron's `userData/saves`, validates save slot names, and replaces saves through a synced temporary file and rename. Guest web saves continue using the cookie/localStorage path. Run `npm test` in `electron/` for save containment and interrupted-write checks.
 
 ### Telemetry and external links
 
