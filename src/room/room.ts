@@ -303,6 +303,7 @@ interface BlurCache {
 type DrawProfileCounter = { calls: number; totalMs: number };
 
 export class Room {
+  /** Room identity used by player location, links, and save restoration. */
   globalId: string;
   // Path identifier to group rooms that belong to the same path/sidepath
   pathId: string;
@@ -358,6 +359,7 @@ export class Room {
   height: number;
   type: RoomType;
   depth: number;
+  /** Minimap grouping within a level; distinct from depth and pathId. */
   mapGroup: number;
   name: string = "";
   message: string = "";
@@ -479,7 +481,9 @@ export class Room {
   savePoint: Room;
   lastEnemyCount: number;
   outerWalls: Array<Wall>;
+  /** The Level that owns this room, including sidepath levels. */
   level: Level;
+  /** Index in level.rooms, assigned by Level.setRooms; not a global room ID. */
   id: number;
   tunnelDoor: Door = null; // this is the door that connects the start room to the exit room
   active: boolean;

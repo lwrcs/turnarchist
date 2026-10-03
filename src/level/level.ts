@@ -74,6 +74,7 @@ export class Level {
   width: number;
   height: number;
   game: Game;
+  /** This level's complete room set, including rooms outside the current view. */
   rooms: Room[];
   roomsById: Map<string, Room>;
   // Group rooms by path identifier
@@ -83,6 +84,7 @@ export class Level {
   exitRoom: Room;
   startRoom: Room;
   enemyParameters: EnemyParameters;
+  /** Only main-path levels are appended to Game.levels. */
   isMainPath: boolean = true;
   mapGroup: number;
   populator: Populator;

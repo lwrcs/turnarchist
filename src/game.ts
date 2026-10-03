@@ -674,14 +674,21 @@ export class Game {
     this.pushMessage(`Screenshot saved (${dstW}×${dstH})`);
   }
 
-  prevLevel: Room; // for transitions
+  /** Outgoing room retained while a door or ladder transition is presented. */
+  prevLevel: Room;
+  /** Room currently presented by the local game view. */
   room: Room;
+  /** Active level's rooms; not a registry of every generated sidepath or depth. */
   rooms: Array<Room>;
+  /** Active room's owning level after a transition or save restore settles. */
   level: Level;
+  /** Generated main-path levels, indexed by depth. Sidepath levels live on their rooms. */
   levels: Array<Level>;
+  /** Lookup for the active room set. Rebuilt when the active level changes. */
   roomsById: Map<string, Room>;
+  /** Lookup for registered main-path levels. */
   levelsById: Map<string, Level>;
-  // Active path identifier for filtering draw/update
+  /** Path selected for draw/update filtering; transition code may switch it before room. */
   currentPathId: string = "main";
   private autosaveIntervalId: number | null = null;
   private lastAutosaveAtMs: number = 0;
@@ -704,6 +711,7 @@ export class Game {
   private pendingWaterOffsetY: number = 0;
   private currentCameraOriginX: number = 0;
   private currentCameraOriginY: number = 0;
+  /** Presentation state for room handoffs; not the player's durable location. */
   transitionStartTime: number;
   transitionX: number;
   transitionY: number;
@@ -775,6 +783,7 @@ export class Game {
   loadingSaveV2: boolean = false;
   private startScreenAlpha = 1;
   static delta: number;
+  /** Local game's current depth; a player's room also carries its own depth. */
   currentDepth: number;
   //previousDepth: number;
   private ellipsisFrame: number = 0;

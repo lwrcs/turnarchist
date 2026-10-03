@@ -80,7 +80,9 @@ export class Player extends Drawable {
   lastDirection: Direction;
   private defenseFacing: Direction;
   game: Game;
-  levelID: number; // which room we're in (legacy index; avoid using directly)
+  /** Legacy name: index in this player's current level.rooms, not a level ID. */
+  levelID: number;
+  /** Room globalId used first by getRoom(); levelID remains a compatibility fallback. */
   roomGID?: string;
   health: number;
   maxHealth: number;
