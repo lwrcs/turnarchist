@@ -219,7 +219,8 @@ export class PartitionGenerator {
     mapHeight: number,
     depth: number,
     params: LevelParameters,
-    controls?: { branching?: number; loopiness?: number },
+    controls: { branching?: number; loopiness?: number } | undefined,
+    context: { seed: number; pathId: string },
   ): Promise<Partition[]> {
     // Single-room dungeon mode: when the selected room count is 1, generate exactly one
     // START partition and let population place both ladders inside it.
@@ -233,6 +234,7 @@ export class PartitionGenerator {
     const partialLevel = new PartialLevel();
     let validationResult: ValidationResult;
     let attempts = 0;
+    const maxAttempts = 250;
 
     this.visualizer.updateProgress("Starting dungeon generation", 0);
 
@@ -267,7 +269,25 @@ export class PartitionGenerator {
         0.8,
       );
 
-      // If validation fails, the loop will continue and regenerate
+      if (!validationResult.isValid && attempts >= maxAttempts) {
+        const failure = {
+          seed: context.seed,
+          route: context.pathId,
+          depth,
+          mapWidth,
+          mapHeight,
+          params,
+          controls: controls ?? null,
+          attempts,
+          lastValidation: {
+            type: validationResult.errorType ?? null,
+            message: validationResult.errorMessage ?? "Validator rejected the candidate without a reason",
+          },
+        };
+        throw new Error(
+          `Dungeon generation failed after ${attempts} candidates: ${JSON.stringify(failure)}`,
+        );
+      }
     } while (!validationResult.isValid);
 
     this.visualizer.updateProgress("Finalizing generation", 0.9);

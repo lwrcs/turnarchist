@@ -274,6 +274,7 @@ export class LevelGenerator {
                 branching: (opts as any)?.branching,
                 loopiness: (opts as any)?.loopiness,
               },
+          { seed: this.seed, pathId: pid },
         );
       }
     } else {
@@ -327,6 +328,7 @@ export class LevelGenerator {
                 branching: (opts as any)?.branching,
                 loopiness: (opts as any)?.loopiness,
               },
+          { seed: this.seed, pathId: pid },
         );
       }
     }
