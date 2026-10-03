@@ -1,0 +1,479 @@
+{
+  "web_root": "/mnt/c/Users/Harrison/AppData/Local/Temp/turnarchist-web-dungeon-retry-20261002-clean",
+  "source_commit": "946991ce0b0a2a7637b5526fa13bcef0db92b86d",
+  "source_dirty": false,
+  "cases": 53,
+  "findings": 69,
+  "active_findings": 0,
+  "records": [
+    {
+      "case": "res/level.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 19,
+      "findings": []
+    },
+    {
+      "case": "res/levels/0_0.png",
+      "kind": "authored_graph",
+      "selectable": true,
+      "partitions": 9,
+      "findings": []
+    },
+    {
+      "case": "res/levels/0_1.png",
+      "kind": "authored_graph",
+      "selectable": true,
+      "partitions": 5,
+      "findings": []
+    },
+    {
+      "case": "res/levels/0_3.png",
+      "kind": "authored_graph",
+      "selectable": true,
+      "partitions": 4,
+      "findings": []
+    },
+    {
+      "case": "res/levels/0_4.png",
+      "kind": "authored_graph",
+      "selectable": true,
+      "partitions": 10,
+      "findings": []
+    },
+    {
+      "case": "res/levels/1_0.png",
+      "kind": "authored_graph",
+      "selectable": true,
+      "partitions": 34,
+      "findings": []
+    },
+    {
+      "case": "res/levels/2_0.png",
+      "kind": "authored_graph",
+      "selectable": true,
+      "partitions": 40,
+      "findings": []
+    },
+    {
+      "case": "res/levels/2_1wip.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 15,
+      "findings": []
+    },
+    {
+      "case": "res/levels/3_0.png",
+      "kind": "authored_graph",
+      "selectable": true,
+      "partitions": 19,
+      "findings": []
+    },
+    {
+      "case": "res/levels/4_0.png",
+      "kind": "authored_graph",
+      "selectable": true,
+      "partitions": 50,
+      "findings": []
+    },
+    {
+      "case": "res/levels/c_0.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 60,
+      "findings": []
+    },
+    {
+      "case": "res/levels/castle_1.png",
+      "kind": "authored_graph",
+      "selectable": true,
+      "partitions": 23,
+      "findings": []
+    },
+    {
+      "case": "res/levels/castle_2.png",
+      "kind": "authored_graph",
+      "selectable": true,
+      "partitions": 22,
+      "findings": []
+    },
+    {
+      "case": "res/levels/castle_3.png",
+      "kind": "authored_graph",
+      "selectable": true,
+      "partitions": 31,
+      "findings": []
+    },
+    {
+      "case": "res/levels/download.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 20,
+      "findings": [
+        "unreachable_partition:1:DUNGEON",
+        "unreachable_partition:2:DUNGEON",
+        "unreachable_partition:3:DUNGEON",
+        "unreachable_partition:4:DUNGEON",
+        "unreachable_partition:5:DUNGEON",
+        "unreachable_partition:6:DUNGEON",
+        "unreachable_partition:7:DUNGEON",
+        "unreachable_partition:8:DUNGEON",
+        "unreachable_partition:9:DUNGEON",
+        "unreachable_partition:10:DUNGEON",
+        "unreachable_partition:11:DUNGEON",
+        "unreachable_partition:12:DUNGEON",
+        "unreachable_partition:13:DUNGEON",
+        "unreachable_partition:14:DUNGEON",
+        "unreachable_partition:15:DUNGEON",
+        "unreachable_partition:16:DUNGEON",
+        "unreachable_partition:17:DUNGEON",
+        "unreachable_partition:18:BOSS",
+        "unreachable_partition:19:DOWNLADDER"
+      ]
+    },
+    {
+      "case": "res/levels/generated_levels_center_68x53_13rooms_2025-07-28_23_30_18.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 14,
+      "findings": []
+    },
+    {
+      "case": "res/levels/generated_levels_center_81x76_9rooms_2025-07-28_23_35_00.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 10,
+      "findings": []
+    },
+    {
+      "case": "res/levels/generated_levels_center_90x62_14rooms_2025-07-28_23_30_05.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 15,
+      "findings": [
+        "unreachable_partition:1:DUNGEON",
+        "unreachable_partition:2:DUNGEON",
+        "unreachable_partition:3:TREASURE",
+        "unreachable_partition:4:DUNGEON",
+        "unreachable_partition:5:DUNGEON",
+        "unreachable_partition:6:DUNGEON",
+        "unreachable_partition:7:DUNGEON",
+        "unreachable_partition:8:DUNGEON",
+        "unreachable_partition:9:DUNGEON",
+        "unreachable_partition:10:DUNGEON",
+        "unreachable_partition:11:DUNGEON",
+        "unreachable_partition:12:DUNGEON",
+        "unreachable_partition:13:BOSS",
+        "unreachable_partition:14:DOWNLADDER"
+      ]
+    },
+    {
+      "case": "res/levels/generated_levels_center_92x78_19rooms_2025-07-28_23_34_39.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 19,
+      "findings": []
+    },
+    {
+      "case": "res/levels/generated_levels_center_96x52_19rooms_2025-07-28_23_35_15.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 18,
+      "findings": []
+    },
+    {
+      "case": "res/levels/generated_levels_corners_64x68_18rooms_2025-07-28_23_29_32.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 20,
+      "findings": [
+        "unreachable_partition:1:DUNGEON",
+        "unreachable_partition:2:DUNGEON",
+        "unreachable_partition:3:DUNGEON",
+        "unreachable_partition:4:DUNGEON",
+        "unreachable_partition:5:DUNGEON",
+        "unreachable_partition:6:DUNGEON",
+        "unreachable_partition:7:DUNGEON",
+        "unreachable_partition:8:DUNGEON",
+        "unreachable_partition:9:DUNGEON",
+        "unreachable_partition:10:DUNGEON",
+        "unreachable_partition:11:DUNGEON",
+        "unreachable_partition:12:DUNGEON",
+        "unreachable_partition:13:DUNGEON",
+        "unreachable_partition:14:DUNGEON",
+        "unreachable_partition:15:DUNGEON",
+        "unreachable_partition:16:DUNGEON",
+        "unreachable_partition:17:DUNGEON",
+        "unreachable_partition:18:BOSS",
+        "unreachable_partition:19:DOWNLADDER"
+      ]
+    },
+    {
+      "case": "res/levels/generated_levels_corners_66x61_8rooms_2025-07-28_23_34_56.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 9,
+      "findings": []
+    },
+    {
+      "case": "res/levels/generated_levels_corners_76x60_16rooms_2025-07-28_23_35_06.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 14,
+      "findings": [
+        "missing_downladder"
+      ]
+    },
+    {
+      "case": "res/levels/generated_levels_corners_88x72_9rooms_2025-07-28_23_34_57.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 10,
+      "findings": []
+    },
+    {
+      "case": "res/levels/generated_levels_corners_97x67_8rooms_2025-07-28_23_35_05.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 9,
+      "findings": []
+    },
+    {
+      "case": "res/levels/generated_levels_split_63x61_11rooms_2025-07-28_23_34_54.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 12,
+      "findings": []
+    },
+    {
+      "case": "res/levels/generated_levels_split_67x78_9rooms_2025-07-28_23_34_59.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 7,
+      "findings": [
+        "missing_downladder"
+      ]
+    },
+    {
+      "case": "res/levels/generated_levels_split_73x72_10rooms_2025-07-28_23_34_50.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 13,
+      "findings": []
+    },
+    {
+      "case": "res/levels/generated_levels_split_76x78_12rooms_2025-07-28_23_35_15.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 13,
+      "findings": []
+    },
+    {
+      "case": "res/levels/generated_levels_split_89x63_14rooms_2025-07-28_23_35_13.png",
+      "kind": "authored_graph",
+      "selectable": false,
+      "partitions": 16,
+      "findings": [
+        "unreachable_partition:1:DUNGEON",
+        "unreachable_partition:2:DUNGEON",
+        "unreachable_partition:3:DUNGEON",
+        "unreachable_partition:4:DUNGEON",
+        "unreachable_partition:5:DUNGEON",
+        "unreachable_partition:6:DUNGEON",
+        "unreachable_partition:7:DUNGEON",
+        "unreachable_partition:8:DUNGEON",
+        "unreachable_partition:9:DUNGEON",
+        "unreachable_partition:10:DUNGEON",
+        "unreachable_partition:11:DUNGEON",
+        "unreachable_partition:12:DUNGEON",
+        "unreachable_partition:13:DUNGEON",
+        "unreachable_partition:14:BOSS",
+        "unreachable_partition:15:DOWNLADDER"
+      ]
+    },
+    {
+      "case": "res/levels/0_0.png",
+      "kind": "authored_populated",
+      "seed": 1,
+      "rooms": 9,
+      "source": "png",
+      "findings": []
+    },
+    {
+      "case": "res/levels/0_1.png",
+      "kind": "authored_populated",
+      "seed": 1,
+      "rooms": 5,
+      "source": "png",
+      "findings": []
+    },
+    {
+      "case": "res/levels/0_3.png",
+      "kind": "authored_populated",
+      "seed": 1,
+      "rooms": 4,
+      "source": "png",
+      "findings": []
+    },
+    {
+      "case": "res/levels/0_4.png",
+      "kind": "authored_populated",
+      "seed": 1,
+      "rooms": 10,
+      "source": "png",
+      "findings": []
+    },
+    {
+      "case": "res/levels/1_0.png",
+      "kind": "authored_populated",
+      "seed": 1,
+      "rooms": 34,
+      "source": "png",
+      "findings": []
+    },
+    {
+      "case": "res/levels/2_0.png",
+      "kind": "authored_populated",
+      "seed": 1,
+      "rooms": 40,
+      "source": "png",
+      "findings": []
+    },
+    {
+      "case": "res/levels/3_0.png",
+      "kind": "authored_populated",
+      "seed": 1,
+      "rooms": 19,
+      "source": "png",
+      "findings": []
+    },
+    {
+      "case": "res/levels/4_0.png",
+      "kind": "authored_populated",
+      "seed": 1,
+      "rooms": 50,
+      "source": "png",
+      "findings": []
+    },
+    {
+      "case": "standard:1:depth0",
+      "kind": "procedural_seed",
+      "seed": 1,
+      "rooms": 7,
+      "source": "procedural",
+      "findings": []
+    },
+    {
+      "case": "standard:1:depth1",
+      "kind": "procedural_seed",
+      "seed": 1,
+      "rooms": 7,
+      "source": "procedural",
+      "findings": []
+    },
+    {
+      "case": "standard:1:depth2",
+      "kind": "procedural_seed",
+      "seed": 1,
+      "rooms": 11,
+      "source": "procedural",
+      "findings": []
+    },
+    {
+      "case": "standard:2:depth0",
+      "kind": "procedural_seed",
+      "seed": 2,
+      "rooms": 7,
+      "source": "procedural",
+      "findings": []
+    },
+    {
+      "case": "standard:2:depth1",
+      "kind": "procedural_seed",
+      "seed": 2,
+      "rooms": 11,
+      "source": "procedural",
+      "findings": []
+    },
+    {
+      "case": "standard:2:depth2",
+      "kind": "procedural_seed",
+      "seed": 2,
+      "rooms": 13,
+      "source": "procedural",
+      "findings": []
+    },
+    {
+      "case": "standard:3:depth0",
+      "kind": "procedural_seed",
+      "seed": 3,
+      "rooms": 7,
+      "source": "procedural",
+      "findings": []
+    },
+    {
+      "case": "standard:3:depth1",
+      "kind": "procedural_seed",
+      "seed": 3,
+      "rooms": 8,
+      "source": "procedural",
+      "findings": []
+    },
+    {
+      "case": "standard:3:depth2",
+      "kind": "procedural_seed",
+      "seed": 3,
+      "rooms": 14,
+      "source": "procedural",
+      "findings": []
+    },
+    {
+      "case": "standard:123:depth0",
+      "kind": "procedural_seed",
+      "seed": 123,
+      "rooms": 7,
+      "source": "procedural",
+      "findings": []
+    },
+    {
+      "case": "standard:123:depth1",
+      "kind": "procedural_seed",
+      "seed": 123,
+      "rooms": 8,
+      "source": "procedural",
+      "findings": []
+    },
+    {
+      "case": "standard:123:depth2",
+      "kind": "procedural_seed",
+      "seed": 123,
+      "rooms": 13,
+      "source": "procedural",
+      "findings": []
+    },
+    {
+      "case": "res/levels/castle_2.png",
+      "kind": "castle_populated",
+      "seed": 1,
+      "rooms": 22,
+      "source": "png",
+      "findings": []
+    },
+    {
+      "case": "res/levels/castle_3.png",
+      "kind": "castle_populated",
+      "seed": 4,
+      "rooms": 31,
+      "source": "png",
+      "findings": []
+    },
+    {
+      "case": "res/levels/castle_1.png",
+      "kind": "castle_populated",
+      "seed": 64,
+      "rooms": 23,
+      "source": "png",
+      "findings": []
+    }
+  ]
+}
