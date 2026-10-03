@@ -17,6 +17,15 @@ npm run pack:mac-arm # produces electron/dist/Turnarchist-darwin-arm64/
 npm run pack         # runs all three
 ```
 
+For an offline Windows package check, set `ELECTRON_ZIP_DIR` to a directory
+containing `electron-v<version>-win32-x64.zip`, then run `npm run pack:win`.
+The optional directory prevents Packager from downloading Electron. The
+repeatable hidden runtime check is
+`node_modules/electron/dist/electron.exe tests/launch-smoke.cjs` from this
+directory; it uses temporary user data and verifies the staged game, sprite
+sheets, and preload save bridge. Run `node tests/verify-package.cjs` after a
+Windows package build to compare every staged game file with packaged bytes.
+
 The parent repo must have had `npm install` run at least once so `../node_modules/.bin/webpack` exists. You do not need to run `npm run build` in the root — `build.js` invokes webpack directly with its own config.
 
 ## Layout

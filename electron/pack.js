@@ -51,6 +51,8 @@ packager({
   appVersion: require("../package.json").version,
   platform,
   arch,
+  // A local ZIP makes controlled package checks possible without a download.
+  electronZipDir: process.env.ELECTRON_ZIP_DIR || undefined,
   out: path.join(electronDir, "dist"),
   overwrite: true,
   prune: true,
@@ -65,6 +67,7 @@ packager({
     /^\/webpack\.electron\.config\.js$/,
     /^\/play\.electron\.html$/,
     /^\/README\.md$/,
+    /^\/tests($|\/)/,
     /^\/\.gitignore$/,
   ],
 })

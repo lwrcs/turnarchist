@@ -69,3 +69,10 @@ node electron/build.js
 ```
 
 The server and bot commands above only check types; their start scripts connect to external services. Electron staging builds `electron/app/` but does not launch or package the application.
+
+For controlled startup checks, run `node scripts/smoke-package-startup.cjs`.
+It starts the server with a loopback-only database URL and no Oracle key,
+checks local HTTP responses without querying the database, then runs the bot
+entrypoint with Discord login and command registration intercepted before any
+external request. Run the Electron launch and Windows package checks separately
+as described in `electron/README.md`.
